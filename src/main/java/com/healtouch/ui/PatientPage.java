@@ -1,0 +1,23 @@
+package com.healtouch.ui;
+
+import com.healtouch.app.AppServices;
+import com.healtouch.model.*;
+import com.healtouch.util.Checks;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.scene.Parent;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.util.StringConverter;
+
+import java.time.LocalDate;
+import java.util.List;
+
+public class PatientPage {
+    private final AppServices services; private final UserSession session; private final TableView<Patient> table=new TableView<Patient>();private final TextField search=new TextField();
+    public PatientPage(AppServices services,UserSession session){this.services=services;this.session=session;}
+    public Parent node(){search.setPromptText("姓名、证件号码或手机号");Button query=new Button("查询");query.setOnAction(e->load());Button create=new Button("创建档案");create.setOnAction(e->openForm(null));TableColumn<Patient,String> code=column("患者ID",p->p.patientCode);TableColumn<Patient,String> name=column("姓名",p->p.name);TableColumn<Patient,String> type=column("类型",p->p.patientType==PatientType.CHILD?"小儿":"成人");TableColumn<Patient,String> phone=column("电话",p->p.phone);TableColumn<Patient,String> balance=column("预存余额",p->com.healtouch.util.Money.format(p.balanceCents));table.getColumns().addAll(code,name,type,phone,balance);table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);table.setOnMouseClicked(e->{if(e.getClickCount()==2&&table.getSelectionModel().getSelectedItem()!=null)openForm(table.getSelectionModel().getSelectedItem());});VBox.setVgrow(table,Priority.ALWAYS);VBox page=Ui.page("患者管理",Ui.toolbar(search,query,create),table);load();return page;}
+    private TableColumn<Patient,String> column(String label,java.util.function.Function<Patient,String> getter){TableColumn<Patient,String> c=new TableColumn<Patient,String>(label);c.setCellValueFactory(x->new SimpleStringProperty(getter.apply(x.getValue())));return c;}
+    private void load(){try{List<Patient> result=services.patients.search(session,search.getText());table.setItems(FXCollections.observableArrayList(result));}catch(Exception e){Ui.error(e);}}
+    private void openForm(Patient existing){Dialog<ButtonType> dialog=new Dialog<ButtonType>();dialog.setTitle(existing==null?"创建患者档案":"编辑患者档案");dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK,ButtonType.CANCEL);GridPane g=new GridPane();g.setHgap(10);g.setVgap(8);ComboBox<PatientType> type=new ComboBox<PatientType>(FXCollections.observableArrayList(PatientType.values()));ComboBox<Gender> gender=new ComboBox<Gender>(FXCollections.observableArrayList(Gender.values()));TextField name=new TextField();TextField idType=new TextField();TextField idNumber=new TextField();DatePicker birth=new DatePicker();TextField phone=new TextField();TextField address=new TextField();TextField guardian=new TextField();TextField relationship=new TextField();TextField guardianPhone=new TextField();TextArea note=new TextArea();note.setPrefRowCount(2);g.addRow(0,new Label("患者类型*"),type);g.addRow(1,new Label("姓名*"),name);g.addRow(2,new Label("性别*"),gender);g.addRow(3,new Label("证件类型*"),idType);g.addRow(4,new Label("证件号码*"),idNumber);g.addRow(5,new Label("出生日期*"),birth);g.addRow(6,new Label("联系电话*"),phone);g.addRow(7,new Label("联系地址"),address);g.addRow(8,new Label("监护人姓名（小儿必填）"),guardian);g.addRow(9,new Label("关系（小儿必填）"),relationship);g.addRow(10,new Label("监护人电话（小儿必填）"),guardianPhone);g.addRow(11,new Label("备注"),note);if(existing!=null){type.setValue(existing.patientType);name.setText(existing.name);gender.setValue(existing.gender);idType.setText(existing.idType);idNumber.setText(existing.idNumber);birth.setValue(existing.birthDate);phone.setText(existing.phone);address.setText(existing.address);guardian.setText(existing.guardianName);relationship.setText(existing.guardianRelationship);guardianPhone.setText(existing.guardianPhone);note.setText(existing.remark);}dialog.getDialogPane().setContent(g);dialog.setResultConverter(button->{if(button==ButtonType.OK){try{Patient p=existing==null?new Patient():existing;p.patientType=type.getValue();p.name=Checks.required(name.getText(),"姓名");p.gender=gender.getValue();p.idType=idType.getText();p.idNumber=idNumber.getText();p.birthDate=birth.getValue();p.phone=phone.getText();p.address=address.getText();p.guardianName=guardian.getText();p.guardianRelationship=relationship.getText();p.guardianPhone=guardianPhone.getText();p.remark=note.getText();if(existing==null)services.patients.create(session,p);else services.patients.update(session,p);load();}catch(Exception e){Ui.error(e);return null;}}return button;});dialog.showAndWait();}
+}

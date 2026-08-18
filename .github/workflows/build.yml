@@ -1,0 +1,134 @@
+name: Build and package HealTouch
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+
+# Verify jobs need only repository reads. The Release job receives write access separately.
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Temurin Java 8
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+      - name: Install pinned Maven
+        shell: powershell
+        run: choco install maven --version=3.8.8 --no-progress --yes
+      - name: Compile, migrate and test
+        run: mvn --batch-mode --errors clean verify
+
+  package:
+    # Every push to main creates testable Windows installers. Pull requests only verify,
+    # so their untrusted code never receives access to repository secrets.
+    needs: verify
+    if: github.event_name == 'push'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+      - name: Install pinned Windows packagers
+        shell: powershell
+        run: |
+          choco install launch4j --version=3.50 --no-progress --yes
+          choco install innosetup --version=6.2.2 --no-progress --yes
+      - name: Install pinned Maven
+        shell: powershell
+        run: choco install maven --version=3.8.8 --no-progress --yes
+      - name: Prepare installer version
+        shell: powershell
+        run: |
+          if ('${{ github.ref_type }}' -eq 'tag') {
+            $version = '${{ github.ref_name }}'.TrimStart('v')
+          } else {
+            # Inno Setup accepts a four-part numeric version. This identifies a main-branch CI build.
+            $version = '0.0.0.${{ github.run_number }}'
+          }
+          "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Build application
+        run: mvn --batch-mode --errors clean package -DskipTests
+      - name: Download and verify JavaFX 8 x86 and x64 runtimes
+        shell: powershell
+        env:
+          HEALTOUCH_RUNTIME_X86_URL: ${{ secrets.HEALTOUCH_RUNTIME_X86_URL }}
+          HEALTOUCH_RUNTIME_X64_URL: ${{ secrets.HEALTOUCH_RUNTIME_X64_URL }}
+          HEALTOUCH_RUNTIME_X86_SHA256: ${{ secrets.HEALTOUCH_RUNTIME_X86_SHA256 }}
+          HEALTOUCH_RUNTIME_X64_SHA256: ${{ secrets.HEALTOUCH_RUNTIME_X64_SHA256 }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $runtimes = @(
+            @{ Architecture = 'x86'; Url = $env:HEALTOUCH_RUNTIME_X86_URL; Sha256 = $env:HEALTOUCH_RUNTIME_X86_SHA256 },
+            @{ Architecture = 'x64'; Url = $env:HEALTOUCH_RUNTIME_X64_URL; Sha256 = $env:HEALTOUCH_RUNTIME_X64_SHA256 }
+          )
+          foreach ($runtime in $runtimes) {
+            if ([string]::IsNullOrWhiteSpace($runtime.Url) -or [string]::IsNullOrWhiteSpace($runtime.Sha256)) {
+              throw "请配置 $($runtime.Architecture) JavaFX 8 Runtime 的 URL 和 SHA-256 GitHub Actions Secrets。"
+            }
+            $zip = Join-Path $env:RUNNER_TEMP "healtouch-runtime-$($runtime.Architecture).zip"
+            $expanded = Join-Path $env:RUNNER_TEMP "healtouch-runtime-$($runtime.Architecture)"
+            $destination = Join-Path 'runtime' $runtime.Architecture
+            Invoke-WebRequest -Uri $runtime.Url -OutFile $zip
+            $actualHash = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($actualHash -ne $runtime.Sha256.ToLowerInvariant()) {
+              throw "$($runtime.Architecture) Runtime SHA-256 校验失败。"
+            }
+            Expand-Archive -Path $zip -DestinationPath $expanded -Force
+            $java = Get-ChildItem -Path $expanded -Filter java.exe -File -Recurse |
+              Where-Object { $_.Directory.Name -eq 'bin' } | Select-Object -First 1
+            if ($null -eq $java) { throw "$($runtime.Architecture) Runtime 中未找到 bin\\java.exe。" }
+            $runtimeHome = Split-Path -Parent $java.Directory.FullName
+            if (-not (Get-ChildItem -Path $runtimeHome -Filter jfxrt.jar -File -Recurse | Select-Object -First 1)) {
+              throw "$($runtime.Architecture) Runtime 不包含 JavaFX 8（jfxrt.jar）。"
+            }
+            New-Item -ItemType Directory -Path $destination -Force | Out-Null
+            Copy-Item -Path (Join-Path $runtimeHome '*') -Destination $destination -Recurse -Force
+          }
+      - name: Build x86 installer
+        shell: powershell
+        run: .\packaging\build-installer.ps1 -Architecture x86 -Version $env:VERSION -RuntimeDirectory runtime\x86
+      - name: Build x64 installer
+        shell: powershell
+        run: .\packaging\build-installer.ps1 -Architecture x64 -Version $env:VERSION -RuntimeDirectory runtime\x64
+      - name: Create SHA-256 sums and verify package outputs
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $packages = Get-ChildItem target\installer\HealTouch-*-Setup.exe
+          if ($packages.Count -ne 2) { throw "预期生成 2 个安装包，实际生成 $($packages.Count) 个。" }
+          $packages | Get-FileHash -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLower())  $($_.Path | Split-Path -Leaf)" } |
+            Set-Content target\installer\SHA256SUMS.txt -Encoding ascii
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HealTouch-${{ github.ref_name }}-${{ github.sha }}
+          path: target/installer/*
+          if-no-files-found: error
+
+  release:
+    needs: package
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: HealTouch-${{ github.ref_name }}-${{ github.sha }}
+          path: release-assets
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          fail_on_unmatched_files: true

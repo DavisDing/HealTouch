@@ -639,24 +639,69 @@ SQLite 本地数据库
 **工作流要求**：
 
 - 工作流文件统一放在 `.github/workflows/` 目录。
-- Pull Request 和推送到主分支时，执行 Java 编译、依赖检查、数据库迁移检查和自动化测试。
-- 创建版本标签（格式如 `v1.0.0`）时，执行正式构建，并生成 x86 与 x64 两个 Windows 安装包。
+- Pull Request 时执行 Java 编译、依赖检查、数据库迁移检查和自动化测试；每次推送到主分支都会在上述检查通过后，自动生成 x86/x64 Windows 安装包并保存为 Actions Artifact。
+- 创建版本标签（格式如 `v1.0.0`）时，执行同一套正式构建，生成 x86 与 x64 两个 Windows 安装包，并自动创建 GitHub Release。
 - Windows 构建任务使用 `windows-latest` runner；Java 8、Maven、Launch4j、Inno Setup 的版本必须固定。
 - 打包前执行清理构建，禁止将本地数据库、用户数据、日志和备份文件打入安装包。
 
 **正式构建产物**：
 
 ```text
-HealTouch-x86-Setup.exe
-HealTouch-x64-Setup.exe
+HealTouch-<version>-x86-Setup.exe
+HealTouch-<version>-x64-Setup.exe
 SHA256SUMS.txt
 ```
 
-构建产物作为 GitHub Actions Artifact 保存；正式版本同时创建 GitHub Release，并上传两个安装包及校验文件。版本号必须来自 Git 标签，并同步写入程序关于页面和安装包文件名。
+构建产物作为 GitHub Actions Artifact 保存；正式版本同时创建 GitHub Release，并上传两个安装包及校验文件。版本号来自 Git 标签（去掉 `v` 前缀），并写入安装包文件名；主分支的非正式构建使用 `0.0.0.<GitHub run number>` 作为可追溯版本号。
+
+**首次启用前的仓库配置**：在 GitHub 仓库的 **Settings → Secrets and variables → Actions** 中创建下列 Repository secrets。运行时压缩包必须是受控、可长期访问的 Windows Java 8（含 JavaFX）运行时；工作流会校验 SHA-256，校验失败即停止发布。
+
+| Secret | 内容 |
+| --- | --- |
+| `HEALTOUCH_RUNTIME_X86_URL` | x86 JavaFX 8 Runtime ZIP 的 HTTPS 下载地址 |
+| `HEALTOUCH_RUNTIME_X86_SHA256` | 该 x86 ZIP 的 64 位十六进制 SHA-256 值 |
+| `HEALTOUCH_RUNTIME_X64_URL` | x64 JavaFX 8 Runtime ZIP 的 HTTPS 下载地址 |
+| `HEALTOUCH_RUNTIME_X64_SHA256` | 该 x64 ZIP 的 64 位十六进制 SHA-256 值 |
+
+> 不要在仓库中提交运行时 ZIP、下载凭据或签名证书。推送到 `main` 后可在 **Actions** 页面下载构建产物；推送例如 `v1.0.0` 的标签后会额外创建正式 Release。
 
 **质量门禁与安全要求**：
 
 - 任一编译、测试、数据库迁移检查、打包或完整性校验失败，工作流必须失败，不得发布不完整安装包。
 - 正式发布前生成两个安装包的 SHA-256 校验值。
 - GitHub Actions 不保存患者数据、生产数据库、备份口令或其他敏感信息；签名证书等凭据只能保存在 GitHub Actions Secrets 中。
-- 工作流保留构建日志和版本产物，发布权限仅限受保护的主分支或正式版本标签。# HealTouch
+- 工作流保留构建日志和版本产物，发布权限仅限受保护的主分支或正式版本标签。
+
+# HealTouch
+
+---
+
+## 开发实现说明
+
+本仓库现已提供 Java 8/JavaFX 8 单机实现骨架与核心业务代码：
+
+- `src/main/resources/db/migration/`：Flyway 管理的 SQLite 数据库结构和默认角色/分类；金额统一使用分（`*_cents`）保存。
+- `src/main/java/com/healtouch/service/`：患者、项目、治疗登记、全额收费、预存、退款审批/执行、认证和审计等事务服务。
+- `src/main/java/com/healtouch/ui/`：JavaFX 登录、工作台、患者、治疗收费、账单、预存、用户和项目管理页面。
+- `src/test/`：覆盖小儿监护人校验、全额收费和预存扣款的核心流程测试。
+- `.github/workflows/build.yml`：PR 验证、每次推送 `main` 的 Windows x86/x64 安装包 Artifact，以及 `vX.Y.Z` 标签的 SHA-256 和 Release 发布流程。
+
+### 本地运行
+
+要求使用 **带 JavaFX 的 JDK 8**：
+
+```bash
+mvn clean test
+mvn clean package
+```
+
+当前 Maven 配置生成可执行 fat jar；也可使用：
+
+```bash
+mvn clean package
+java -jar target/healtouch-1.0.0-SNAPSHOT-shaded.jar
+```
+
+首次启动会在用户目录创建 `HealTouch/healtouch.db`，不会写入安装目录。默认账号为 `admin`，初始密码为 `Admin@123`，首次登录必须修改密码。
+
+> 生产发布时，GitHub Actions 中的 `HEALTOUCH_RUNTIME_X86_URL`、`HEALTOUCH_RUNTIME_X64_URL` 及对应的 SHA-256 Secrets 必须配置为经审计、固定版本的 JavaFX 8 Runtime；其内容随对应安装包内置，不存储任何业务数据。

@@ -1,0 +1,16 @@
+<launch4jConfig>
+  <dontWrapJar>true</dontWrapJar>
+  <headerType>gui</headerType>
+  <jar>healtouch-1.0.0-SNAPSHOT-shaded.jar</jar>
+  <outfile>HealTouch.exe</outfile>
+  <errTitle>HealTouch 启动失败</errTitle>
+  <chdir>.</chdir>
+  <priority>normal</priority>
+  <stayAlive>false</stayAlive>
+  <restartOnCrash>false</restartOnCrash>
+  <jre>
+    <path>runtime</path>
+    <minVersion>1.8.0_202</minVersion>
+    <jdkPreference>preferJre</jdkPreference>
+  </jre>
+</launch4jConfig>

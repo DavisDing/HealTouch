@@ -1,0 +1,10 @@
+/target/
+/.idea/
+*.iml
+*.db
+*.db-*
+/data/
+/logs/
+/backups/
+*.log
+.DS_Store
