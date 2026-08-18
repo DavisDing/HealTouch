@@ -641,7 +641,7 @@ SQLite 本地数据库
 - 工作流文件统一放在 `.github/workflows/` 目录。
 - Pull Request 时执行 Java 编译、依赖检查、数据库迁移检查和自动化测试；每次推送到主分支都会在上述检查通过后，自动生成 x86/x64 Windows 安装包并保存为 Actions Artifact。
 - 创建版本标签（格式如 `v1.0.0`）时，执行同一套正式构建，生成 x86 与 x64 两个 Windows 安装包，并自动创建 GitHub Release。
-- Windows 构建任务使用 `windows-latest` runner；Java 8、Maven、Launch4j、Inno Setup 的版本必须固定。
+- Windows 构建任务使用 `windows-latest` runner；Java 8、Maven、Launch4j、Inno Setup 的版本必须固定。Maven 3.9.16 从 Apache Archive 下载并校验 SHA-512，不依赖 GitHub Runner 预装版本或 Chocolatey 包版本。
 - 打包前执行清理构建，禁止将本地数据库、用户数据、日志和备份文件打入安装包。
 
 **正式构建产物**：
