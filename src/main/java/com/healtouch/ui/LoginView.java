@@ -15,7 +15,7 @@ public class LoginView {
     private final VBox root = new VBox(14);
     public LoginView(AppServices services, Consumer<UserSession> onLogin) {
         Label title=new Label("HealTouch");title.setStyle("-fx-font-size: 28px; -fx-font-weight: bold;");
-        Label subtitle=new Label("推拿馆管理系统");
+        Label subtitle=new Label("推拿门诊管理系统");
         TextField account=new TextField();account.setPromptText("登录账号");account.setText("admin");
         PasswordField password=new PasswordField();password.setPromptText("登录密码");
         Label hint=new Label("首次启动账号：admin，初始密码：Admin@123（登录后必须修改）");hint.setWrapText(true);hint.setStyle("-fx-text-fill: #666;");

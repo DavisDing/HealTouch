@@ -23,7 +23,7 @@ jobs:
           cache: maven
       - name: Install pinned Maven
         shell: powershell
-        run: choco install maven --version=3.8.8 --no-progress --yes
+        run: choco install maven --version=3.8.8 --allow-downgrade --no-progress --yes
       - name: Compile, migrate and test
         run: mvn --batch-mode --errors clean verify
 
@@ -47,7 +47,7 @@ jobs:
           choco install innosetup --version=6.2.2 --no-progress --yes
       - name: Install pinned Maven
         shell: powershell
-        run: choco install maven --version=3.8.8 --no-progress --yes
+        run: choco install maven --version=3.8.8 --allow-downgrade --no-progress --yes
       - name: Prepare installer version
         shell: powershell
         run: |

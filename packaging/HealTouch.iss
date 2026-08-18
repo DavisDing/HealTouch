@@ -24,7 +24,7 @@ SolidCompression=yes
 ArchitecturesAllowed={#Arch}
 ArchitecturesInstallIn64BitMode=x64
 Uninstallable=yes
-UninstallDisplayName=HealTouch 推拿馆管理系统
+UninstallDisplayName=HealTouch 推拿门诊管理系统
 
 [Files]
 Source: "..\target\healtouch-*-shaded.jar"; DestDir: "{app}"; Flags: ignoreversion

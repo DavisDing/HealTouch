@@ -6,7 +6,7 @@
     <artifactId>healtouch</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <name>HealTouch</name>
-    <description>单机推拿馆管理软件</description>
+    <description>单机推拿门诊管理软件</description>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
