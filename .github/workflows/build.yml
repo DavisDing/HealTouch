@@ -26,15 +26,20 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
+          Write-Host "JAVA_HOME=$env:JAVA_HOME"
           & java -version
+          $javaFxRuntime = Join-Path $env:JAVA_HOME 'jre\lib\ext\jfxrt.jar'
+          if (-not (Test-Path -LiteralPath $javaFxRuntime -PathType Leaf)) {
+            throw "The configured JDK is missing the JavaFX 8 runtime: $javaFxRuntime"
+          }
           & javap javafx.application.Application | Out-Null
-          if ($LASTEXITCODE -ne 0) { throw '当前 JDK 不包含 JavaFX 8，无法编译 HealTouch UI。' }
+          if ($LASTEXITCODE -ne 0) { throw 'JavaFX 8 is present on disk but cannot be loaded by the configured JDK.' }
       - name: Verify runner Maven 3.9.16
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           $actualVersion = (& mvn --version | Select-Object -First 1)
-          if ($actualVersion -notmatch 'Apache Maven 3\.9\.16') { throw "Maven 版本不正确：$actualVersion" }
+          if ($actualVersion -notmatch 'Apache Maven 3\.9\.16') { throw "Expected Apache Maven 3.9.16, but found: $actualVersion" }
           Write-Host $actualVersion
       - name: Resolve Maven dependencies and build plugins
         run: mvn --batch-mode --errors dependency:go-offline
@@ -64,15 +69,20 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
+          Write-Host "JAVA_HOME=$env:JAVA_HOME"
           & java -version
+          $javaFxRuntime = Join-Path $env:JAVA_HOME 'jre\lib\ext\jfxrt.jar'
+          if (-not (Test-Path -LiteralPath $javaFxRuntime -PathType Leaf)) {
+            throw "The configured JDK is missing the JavaFX 8 runtime: $javaFxRuntime"
+          }
           & javap javafx.application.Application | Out-Null
-          if ($LASTEXITCODE -ne 0) { throw '当前 JDK 不包含 JavaFX 8，无法构建 HealTouch 安装包。' }
+          if ($LASTEXITCODE -ne 0) { throw 'JavaFX 8 is present on disk but cannot be loaded by the configured JDK.' }
       - name: Verify runner Maven 3.9.16
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           $actualVersion = (& mvn --version | Select-Object -First 1)
-          if ($actualVersion -notmatch 'Apache Maven 3\.9\.16') { throw "Maven 版本不正确：$actualVersion" }
+          if ($actualVersion -notmatch 'Apache Maven 3\.9\.16') { throw "Expected Apache Maven 3.9.16, but found: $actualVersion" }
           Write-Host $actualVersion
       - name: Resolve Maven dependencies and build plugins
         run: mvn --batch-mode --errors dependency:go-offline
@@ -103,7 +113,7 @@ jobs:
           )
           foreach ($runtime in $runtimes) {
             if ([string]::IsNullOrWhiteSpace($runtime.Url) -or [string]::IsNullOrWhiteSpace($runtime.Sha256)) {
-              throw "请配置 $($runtime.Architecture) JavaFX 8 Runtime 的 URL 和 SHA-256 GitHub Actions Secrets。"
+              throw "Configure the $($runtime.Architecture) JavaFX 8 Runtime URL and SHA-256 GitHub Actions secrets."
             }
             $zip = Join-Path $env:RUNNER_TEMP "healtouch-runtime-$($runtime.Architecture).zip"
             $expanded = Join-Path $env:RUNNER_TEMP "healtouch-runtime-$($runtime.Architecture)"
@@ -111,15 +121,15 @@ jobs:
             Invoke-WebRequest -Uri $runtime.Url -OutFile $zip
             $actualHash = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLowerInvariant()
             if ($actualHash -ne $runtime.Sha256.ToLowerInvariant()) {
-              throw "$($runtime.Architecture) Runtime SHA-256 校验失败。"
+              throw "$($runtime.Architecture) Runtime SHA-256 verification failed."
             }
             Expand-Archive -Path $zip -DestinationPath $expanded -Force
             $java = Get-ChildItem -Path $expanded -Filter java.exe -File -Recurse |
               Where-Object { $_.Directory.Name -eq 'bin' } | Select-Object -First 1
-            if ($null -eq $java) { throw "$($runtime.Architecture) Runtime 中未找到 bin\\java.exe。" }
+            if ($null -eq $java) { throw "$($runtime.Architecture) Runtime does not contain bin\\java.exe." }
             $runtimeHome = Split-Path -Parent $java.Directory.FullName
             if (-not (Get-ChildItem -Path $runtimeHome -Filter jfxrt.jar -File -Recurse | Select-Object -First 1)) {
-              throw "$($runtime.Architecture) Runtime 不包含 JavaFX 8（jfxrt.jar）。"
+              throw "$($runtime.Architecture) Runtime does not include JavaFX 8 (jfxrt.jar)."
             }
             New-Item -ItemType Directory -Path $destination -Force | Out-Null
             Copy-Item -Path (Join-Path $runtimeHome '*') -Destination $destination -Recurse -Force
@@ -135,7 +145,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $packages = Get-ChildItem target\installer\HealTouch-*-Setup.exe
-          if ($packages.Count -ne 2) { throw "预期生成 2 个安装包，实际生成 $($packages.Count) 个。" }
+          if ($packages.Count -ne 2) { throw "Expected 2 installers, but found $($packages.Count)." }
           $packages | Get-FileHash -Algorithm SHA256 |
             ForEach-Object { "$($_.Hash.ToLower())  $($_.Path | Split-Path -Leaf)" } |
             Set-Content target\installer\SHA256SUMS.txt -Encoding ascii
