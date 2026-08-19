@@ -17,8 +17,6 @@
         <flyway.version>6.5.7</flyway.version>
         <slf4j.version>1.7.36</slf4j.version>
         <junit.version>4.13.2</junit.version>
-        <!-- Temurin 8 used by CI does not bundle JavaFX; compile against this Maven-managed API. -->
-        <javafx.version>8.0.202</javafx.version>
     </properties>
 
     <dependencies>
@@ -36,10 +34,6 @@
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId><artifactId>slf4j-simple</artifactId><version>${slf4j.version}</version>
-        </dependency>
-        <!-- JavaFX is supplied at runtime by the bundled JavaFX 8 Runtime, not shaded into the application JAR. -->
-        <dependency>
-            <groupId>org.openjfx</groupId><artifactId>javafx-controls</artifactId><version>${javafx.version}</version><scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>junit</groupId><artifactId>junit</artifactId><version>${junit.version}</version><scope>test</scope>
@@ -65,6 +59,10 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>2.22.2</version>
+            </plugin>
+            <!-- Used by CI preflight to resolve all application dependencies and build plugins before compilation. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId><artifactId>maven-dependency-plugin</artifactId><version>3.6.1</version>
             </plugin>
         </plugins>
     </build>

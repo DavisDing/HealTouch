@@ -14,13 +14,21 @@ jobs:
   verify:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Temurin Java 8
+      - uses: actions/checkout@v5
+      - name: Set up Liberica Java 8 with JavaFX
         uses: actions/setup-java@v5
         with:
-          distribution: temurin
+          distribution: liberica
           java-version: '8'
+          java-package: jdk+fx
           cache: maven
+      - name: Verify Java 8 and JavaFX toolchain
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & java -version
+          & javap javafx.application.Application | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw '当前 JDK 不包含 JavaFX 8，无法编译 HealTouch UI。' }
       - name: Verify runner Maven 3.9.16
         shell: powershell
         run: |
@@ -28,6 +36,8 @@ jobs:
           $actualVersion = (& mvn --version | Select-Object -First 1)
           if ($actualVersion -notmatch 'Apache Maven 3\.9\.16') { throw "Maven 版本不正确：$actualVersion" }
           Write-Host $actualVersion
+      - name: Resolve Maven dependencies and build plugins
+        run: mvn --batch-mode --errors dependency:go-offline
       - name: Compile, migrate and test
         run: mvn --batch-mode --errors clean verify
 
@@ -38,17 +48,25 @@ jobs:
     if: github.event_name == 'push'
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
         with:
-          distribution: temurin
+          distribution: liberica
           java-version: '8'
+          java-package: jdk+fx
           cache: maven
       - name: Install pinned Windows packagers
         shell: powershell
         run: |
           choco install launch4j --version=3.50 --no-progress --yes
           choco install innosetup --version=6.2.2 --no-progress --yes
+      - name: Verify Java 8 and JavaFX toolchain
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & java -version
+          & javap javafx.application.Application | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw '当前 JDK 不包含 JavaFX 8，无法构建 HealTouch 安装包。' }
       - name: Verify runner Maven 3.9.16
         shell: powershell
         run: |
@@ -56,6 +74,8 @@ jobs:
           $actualVersion = (& mvn --version | Select-Object -First 1)
           if ($actualVersion -notmatch 'Apache Maven 3\.9\.16') { throw "Maven 版本不正确：$actualVersion" }
           Write-Host $actualVersion
+      - name: Resolve Maven dependencies and build plugins
+        run: mvn --batch-mode --errors dependency:go-offline
       - name: Prepare installer version
         shell: powershell
         run: |

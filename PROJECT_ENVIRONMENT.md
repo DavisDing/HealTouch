@@ -1,13 +1,89 @@
-# 项目环境与安装记录
+# HealTouch 项目环境与安装记录
 
-本文件记录为 HealTouch 构建、测试和打包所需的环境变更与外部依赖。
+> 本文件用于记录 HealTouch 项目开发、构建、测试、打包过程中涉及的本机软件、项目依赖、CI 工具、插件和项目外文件。
+>
+> **归因说明**：Git 和 Homebrew 当前状态只能证明软件“现在存在”以及项目“需要什么”，不能完全证明某个软件一定是在本项目期间安装的。因此本文件区分“已确认”“高度相关”“可能相关”“未确认”，项目结束时按此状态审计，避免误删其他项目正在使用的工具。
 
-| 日期 | 命令 / 方式 | 软件或依赖 | 版本 | 位置 | 用途 | 是否全局安装 | 是否可清理 / 卸载方式 | 可能被其他项目使用 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-08-19 | Maven `pom.xml` 依赖声明；由 Maven 在 CI 缓存中解析 | `org.openjfx:javafx-controls` | 8.0.202 | Maven 本地仓库（CI Runner：`~/.m2/repository`）；不写入本机全局环境 | 让不含 JavaFX 的 Temurin JDK 8 在 CI 中编译 JavaFX 源码 | 否 | CI Runner 为临时环境，运行结束自动清理；本项目未在本机下载或安装 | 否（仅本项目构建配置使用） |
-| 2026-08-19 | GitHub Actions `windows-latest` 预装工具，工作流只做版本验证 | Apache Maven | 3.9.16 | GitHub-hosted Windows Runner | 执行 CI 编译、测试与打包 | 否；未在本机安装 | GitHub-hosted Runner 为临时环境，运行结束自动清理 | 可能被同一 CI Runner 的其他任务预装，但本项目不管理其卸载 |
-| 2026-08-19 | GitHub Actions Secrets 指定受控 HTTPS URL，工作流下载并校验 SHA-256 | Java 8 Runtime（含 JavaFX）x86 / x64 | 由受控 Runtime 压缩包版本确定 | GitHub-hosted Windows Runner 的临时目录与项目 `runtime/` 临时构建目录 | 生成可独立运行的 Windows 安装包 | 否；未在本机安装 | GitHub-hosted Runner 为临时环境，运行结束自动清理；构建产物不提交 Git | 否（仅本项目安装包构建使用） |
+## 1. 本机全局软件 / Homebrew 包
 
-## 本机状态
+| 状态 | 软件 | 版本 | 安装方式 | 本机位置 / 当前用途 | 与本项目关系 | 项目结束时处理 | 卸载方式 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 高度相关 | Apache Maven | 3.9.16 | Homebrew | `/opt/homebrew/Cellar/maven/3.9.16`；执行 Maven 构建、测试、打包 | 项目使用 `pom.xml` 管理 Java 构建；README 要求 Maven 3.9.16 | 先确认没有其他项目使用，再决定卸载 | `brew uninstall maven` |
+| 可能相关 / 用户主动安装 | OpenJDK 21 | 21.0.12.1 | Homebrew | `/opt/homebrew/Cellar/openjdk@21/21.0.12.1`；Java 开发运行时候选 | 项目目标为 Java 8，当前项目配置没有直接锁定 JDK 21；可能是为本项目开发环境安装，也可能供其他项目使用 | 不得默认删除；确认其他项目无依赖后再决定 | `brew uninstall openjdk@21` |
+| 间接相关 | OpenJDK | 26.0.2 | Homebrew 依赖安装 | `/opt/homebrew/Cellar/openjdk/26.0.2`；当前 Maven 依赖它运行 | Homebrew 显示它是 `maven` 的依赖；不是本项目单独直接声明的依赖 | 只有在 Maven 卸载后且无其他使用者时，才评估是否删除 | `brew uninstall openjdk`（执行前必须重新检查依赖） |
+| 未确认属于本项目 | SQLite | 3.53.4 | Homebrew 依赖安装 | `/opt/homebrew/Cellar/sqlite/3.53.4`；为 `python@3.14` 依赖 | 项目运行时使用 Maven 的 `org.xerial:sqlite-jdbc:3.36.0.3`，不要求本机 SQLite 命令行工具 | 默认保留；不得因 HealTouch 单独删除 | `brew uninstall sqlite`（仅在确认 Python 和其他项目均不依赖时） |
+| 未确认属于本项目 | Python | 3.14.7 | Homebrew，用户主动安装 | `/opt/homebrew/Cellar/python@3.14/3.14.7` | 项目是 Java/Maven 项目，没有 Python 配置、虚拟环境或 Python 构建脚本 | 默认保留 | `brew uninstall python@3.14`（仅在确认无其他用途时） |
 
-截至 2026-08-19，未因本项目在本机全局安装、升级或卸载 Java、Maven、Chocolatey、Launch4j、Inno Setup 或 JavaFX Runtime。
+### 当前 Homebrew 依赖关系
+
+- `maven` 依赖 `openjdk`。
+- `python@3.14` 依赖 `sqlite`。
+- 因此不能仅凭“项目用过 Maven”就直接删除 `openjdk`；也不能仅凭项目使用 SQLite 数据库就删除系统 `sqlite`。
+- Homebrew 未提供足够的历史安装日志来证明上述每个包的准确安装日期和安装原因。
+
+## 2. 项目声明的 Maven 依赖（项目级，不是全局安装）
+
+这些依赖由 `/Users/dinghao/Downloads/HealTouch/pom.xml` 声明，正常情况下由 Maven 下载到 Maven 本地仓库或 CI Runner 缓存中。它们不应通过 Homebrew 单独卸载。
+
+| 依赖 | 版本 | 用途 | 是否项目级 | 清理方式 |
+| --- | --- | --- | --- | --- |
+| `org.xerial:sqlite-jdbc` | 3.36.0.3 | SQLite JDBC 驱动 | 是 | 删除本项目对应 Maven 缓存坐标前，先确认没有其他项目使用 |
+| `com.zaxxer:HikariCP` | 3.4.5 | 数据库连接池 | 是 | 同上 |
+| `org.flywaydb:flyway-core` | 6.5.7 | 数据库迁移 | 是 | 同上 |
+| `org.mindrot:jbcrypt` | 0.4 | 密码哈希 | 是 | 同上 |
+| `org.slf4j:slf4j-simple` | 1.7.36 | 日志实现 | 是 | 同上 |
+| `junit:junit` | 4.13.2 | 测试 | 是 | 同上 |
+
+### 项目声明的 Maven 构建插件
+
+| 插件 | 版本 | 用途 |
+| --- | --- | --- |
+| `maven-compiler-plugin` | 3.8.1 | Java 编译 |
+| `maven-shade-plugin` | 3.2.4 | 生成可执行 shaded/fat JAR |
+| `maven-surefire-plugin` | 2.22.2 | 执行测试 |
+| `maven-dependency-plugin` | 3.6.1 | CI 预解析项目依赖与构建插件，在编译前暴露依赖解析问题 |
+
+## 3. CI / Windows 打包环境（未安装到本机）
+
+以下工具由 `.github/workflows/build.yml` 和 `packaging/` 配置使用，目标是 GitHub-hosted Windows Runner；当前没有证据表明它们安装在本机 Mac 上。
+
+| 工具 / 内容 | 版本 | 使用位置 | 用途 | 本机状态 |
+| --- | --- | --- | --- | --- |
+| BellSoft Liberica JDK + FX / Java 8 | 工作流固定 Java 8，`jdk+fx` 包 | GitHub Actions Windows Runner | 编译含 JavaFX 的 Java 8 项目 | 未发现本机对应 Java 8 / JavaFX 安装记录 |
+| Apache Maven | 3.9.16 | GitHub Actions Windows Runner | CI 构建、测试、打包 | 本机另有 Homebrew Maven，见第 1 节 |
+| Launch4j | 3.50 | GitHub Actions 通过 Chocolatey 安装 | 将 JAR 包装为 Windows `.exe` | 未发现本机安装 |
+| Inno Setup | 6.2.2 | GitHub Actions 通过 Chocolatey 安装 | 生成 Windows 安装程序 | 未发现本机安装 |
+| JavaFX 8 x86/x64 Runtime | 由 GitHub Secrets 指定压缩包 | Runner 临时目录 / 构建时 `runtime/` | 随 Windows 安装包提供运行时 | 未发现本机安装 |
+
+## 4. Codex 插件 / 技能
+
+- 当前没有发现为 HealTouch 单独安装的第三方 Codex 插件。
+- 项目使用的 `spreadsheets`、`documents`、`presentations`、`browser` 等属于 Codex 可用技能/运行时能力，不是写入 HealTouch 项目的本机软件安装，也不应在项目结束时卸载。
+- 用户提供的“推荐但未安装”插件列表中的插件，不计入本项目已安装内容；除非后续明确安装并在本文件登记。
+
+## 5. 项目外文件与构建产物
+
+| 路径 | 内容 | 当前状态 / 处理建议 |
+| --- | --- | --- |
+| `/Users/dinghao/Downloads/HealTouch/target/` | Maven 编译、测试和打包输出 | 可在项目结束并确认不需要构建产物后删除 |
+| `/Users/dinghao/.m2/repository/` | Maven 本地依赖缓存 | 当前检查时未发现该目录；如果后续构建生成，只清理可确认属于本项目且未被其他项目使用的坐标 |
+| `/Users/dinghao/HealTouch/healtouch.db` | 程序首次运行时可能创建的 SQLite 业务数据库 | 当前未发现；如后续出现，可能包含业务数据，必须先确认再删除 |
+| `/Users/dinghao/HealTouch/` 下的日志、备份、导出文件 | 运行数据 | 不得默认删除，先确认是否需要保留 |
+
+## 6. 已执行的环境操作记录
+
+| 日期 | 操作 | 结果 |
+| --- | --- | --- |
+| 2026-08-18 | 克隆 HealTouch Git 仓库 | 项目源代码位于 `/Users/dinghao/Downloads/HealTouch` |
+| 2026-08-19 | 检查本机 Homebrew、项目配置和缓存位置 | 确认第 1 节所列包当前存在；未执行安装、升级、卸载操作 |
+| 2026-08-19 | 创建 / 更新本记录文件 | 本文件 |
+| 2026-08-19 | 更新 GitHub Actions Java 配置为 BellSoft Liberica JDK 8 `jdk+fx` | CI Runner 临时下载带 JavaFX 的 JDK 8；移除无法解析的 `org.openjfx:javafx-controls:8.0.202` Maven 依赖；未在本机安装或下载 |
+| 2026-08-19 | 增加 CI 构建前自检 | 使用 `javap` 检查 JavaFX 类是否存在，并通过 `maven-dependency-plugin:3.6.1:go-offline` 预解析 Maven 依赖和构建插件；仅在 GitHub-hosted Runner 的临时环境下载缓存，未在本机安装或下载 |
+
+## 7. 项目结束清理规则
+
+1. 先重新扫描并列出项目目录、运行数据目录、Maven 缓存和 Homebrew 包。
+2. 先删除或确认项目构建产物；不删除源代码、Git 历史、真实业务数据、备份或导出文件。
+3. 对 Maven、OpenJDK 21、OpenJDK、SQLite、Python 等全局软件，逐项检查其他项目依赖。
+4. 只有在用户明确确认后，才执行 Homebrew 卸载。
+5. 卸载前记录精确命令、影响和依赖关系；卸载后更新本文件。

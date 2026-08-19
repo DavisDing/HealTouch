@@ -642,8 +642,9 @@ SQLite 本地数据库
 - Pull Request 时执行 Java 编译、依赖检查、数据库迁移检查和自动化测试；每次推送到主分支都会在上述检查通过后，自动生成 x86/x64 Windows 安装包并保存为 Actions Artifact。
 - 创建版本标签（格式如 `v1.0.0`）时，执行同一套正式构建，生成 x86 与 x64 两个 Windows 安装包，并自动创建 GitHub Release。
 - Windows 构建任务使用 `windows-latest` runner；Java 8、Maven、Launch4j、Inno Setup 的版本必须固定。Maven 固定为 GitHub `windows-latest` runner 预装的 3.9.16，工作流会在构建开始时验证实际版本；若 GitHub 更新该预装版本，工作流会明确失败，需同步评估并更新此固定版本。
-- CI 使用的 Temurin Java 8 不包含 JavaFX。项目通过 Maven 的 `org.openjfx:javafx-controls:8.0.202`（`provided` 范围）提供编译期 API；正式安装包运行时仍使用随安装包内置的 JavaFX 8 Runtime，不会将 JavaFX 类库 Shade 进应用 JAR。
+- CI 使用 BellSoft Liberica JDK 8 的 `jdk+fx` 包，其中包含 JavaFX 8，因此 Maven 可直接编译 `javafx.*` 源码。JavaFX 不作为 Maven 依赖或 Shade 内容加入应用 JAR；正式安装包运行时仍使用随安装包内置的 JavaFX 8 Runtime。
 - 打包前执行清理构建，禁止将本地数据库、用户数据、日志和备份文件打入安装包。
+- CI 在编译前执行 JDK 8 / JavaFX 可用性检查，并使用固定版本的 `maven-dependency-plugin` 预解析所有 Maven 依赖与构建插件；这会将“依赖无法解析”和“JDK 不含 JavaFX”的问题提前标记为明确失败步骤。
 
 **正式构建产物**：
 
