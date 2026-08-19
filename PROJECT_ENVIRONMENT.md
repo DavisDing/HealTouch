@@ -69,6 +69,8 @@
 | `/Users/dinghao/.m2/repository/` | Maven 本地依赖缓存 | 当前检查时未发现该目录；如果后续构建生成，只清理可确认属于本项目且未被其他项目使用的坐标 |
 | `/Users/dinghao/HealTouch/healtouch.db` | 程序首次运行时可能创建的 SQLite 业务数据库 | 当前未发现；如后续出现，可能包含业务数据，必须先确认再删除 |
 | `/Users/dinghao/HealTouch/` 下的日志、备份、导出文件 | 运行数据 | 不得默认删除，先确认是否需要保留 |
+| `/private/tmp/healtouch-actions-32227961421/` | GitHub Actions 失败作业日志的临时下载目录；GitHub API 返回 403，未取得日志文件 | 可在项目结束时清理；不含源代码或业务数据 |
+| `/private/tmp/healtouch-local-compile.log` | 本地 Maven 验证的失败输出（受限网络下的依赖解析错误） | 可在项目结束时清理；仅用于排查记录 |
 
 ## 6. 已执行的环境操作记录
 
@@ -79,6 +81,7 @@
 | 2026-08-19 | 创建 / 更新本记录文件 | 本文件 |
 | 2026-08-19 | 更新 GitHub Actions Java 配置为 BellSoft Liberica JDK 8 `jdk+fx` | CI Runner 临时下载带 JavaFX 的 JDK 8；移除无法解析的 `org.openjfx:javafx-controls:8.0.202` Maven 依赖；未在本机安装或下载 |
 | 2026-08-19 | 增加 CI 构建前自检 | 使用 `javap` 检查 JavaFX 类是否存在，并通过 `maven-dependency-plugin:3.6.1:go-offline` 预解析 Maven 依赖和构建插件；仅在 GitHub-hosted Runner 的临时环境下载缓存，未在本机安装或下载 |
+| 2026-08-19 | 排查 GitHub Actions 打包失败并进行本地验证 | 只读查询公开 GitHub Actions API，确认运行 `32227961421` 在 `Verify runner Maven 3.9.16` 失败；该固定补丁版本检查已改为仅要求 Maven 3.x。本地曾使用 `mvn --batch-mode --errors -Dmaven.repo.local=target/maven-repository clean verify` 临时下载项目级 Maven 依赖到项目内 `target/`，未全局安装；因本机受限网络的后续重试失败，输出保存到 `/private/tmp/healtouch-local-compile.log`。另建 `/private/tmp/healtouch-actions-32227961421/` 以尝试下载公开作业日志，但 API 返回 403；两处临时文件均可在项目结束时清理。 |
 
 ## 7. 项目结束清理规则
 

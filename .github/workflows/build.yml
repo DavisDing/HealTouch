@@ -34,12 +34,12 @@ jobs:
           }
           & javap javafx.application.Application | Out-Null
           if ($LASTEXITCODE -ne 0) { throw 'JavaFX 8 is present on disk but cannot be loaded by the configured JDK.' }
-      - name: Verify runner Maven 3.9.16
+      - name: Verify runner Maven version
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           $actualVersion = (& mvn --version | Select-Object -First 1)
-          if ($actualVersion -notmatch 'Apache Maven 3\.9\.16') { throw "Expected Apache Maven 3.9.16, but found: $actualVersion" }
+          if ($actualVersion -notmatch 'Apache Maven 3\.') { throw "Expected Apache Maven 3.x, but found: $actualVersion" }
           Write-Host $actualVersion
       - name: Resolve Maven dependencies and build plugins
         run: mvn --batch-mode --errors dependency:go-offline
@@ -77,12 +77,12 @@ jobs:
           }
           & javap javafx.application.Application | Out-Null
           if ($LASTEXITCODE -ne 0) { throw 'JavaFX 8 is present on disk but cannot be loaded by the configured JDK.' }
-      - name: Verify runner Maven 3.9.16
+      - name: Verify runner Maven version
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           $actualVersion = (& mvn --version | Select-Object -First 1)
-          if ($actualVersion -notmatch 'Apache Maven 3\.9\.16') { throw "Expected Apache Maven 3.9.16, but found: $actualVersion" }
+          if ($actualVersion -notmatch 'Apache Maven 3\.') { throw "Expected Apache Maven 3.x, but found: $actualVersion" }
           Write-Host $actualVersion
       - name: Resolve Maven dependencies and build plugins
         run: mvn --batch-mode --errors dependency:go-offline
