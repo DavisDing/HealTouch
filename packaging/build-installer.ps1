@@ -19,7 +19,26 @@ Copy-Item "$PSScriptRoot\launch4j.xml" $launch4jConfig -Force
 (Get-Content $launch4jConfig) -replace 'healtouch-1.0.0-SNAPSHOT-shaded.jar', $jar.Name |
   Set-Content $launch4jConfig -Encoding UTF8
 
-& launch4jc $launch4jConfig
+# Ensure PATH includes Chocolatey and standard installation paths for launch4j and iscc
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User") + ";" + $env:Path
+
+$launch4jcCmd = Get-Command launch4jc -ErrorAction SilentlyContinue
+if ($null -eq $launch4jcCmd) {
+  $candidate = Get-ChildItem -Path "C:\Program Files*", "C:\tools" -Filter launch4jc.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($candidate) { $launch4jcExe = $candidate.FullName } else { $launch4jcExe = 'launch4jc' }
+} else {
+  $launch4jcExe = 'launch4jc'
+}
+
+$isccCmd = Get-Command iscc -ErrorAction SilentlyContinue
+if ($null -eq $isccCmd) {
+  $candidate = Get-ChildItem -Path "C:\Program Files*", "C:\tools" -Filter ISCC.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($candidate) { $isccExe = $candidate.FullName } else { $isccExe = 'iscc' }
+} else {
+  $isccExe = 'iscc'
+}
+
+& $launch4jcExe $launch4jConfig
 if ($LASTEXITCODE -ne 0) { throw 'Launch4j 打包失败' }
-& iscc "/DAppVersion=$Version" "/DArch=$Architecture" "/DRuntimeDir=$RuntimeDirectory" "$PSScriptRoot\HealTouch.iss"
+& $isccExe "/DAppVersion=$Version" "/DArch=$Architecture" "/DRuntimeDir=$RuntimeDirectory" "$PSScriptRoot\HealTouch.iss"
 if ($LASTEXITCODE -ne 0) { throw 'Inno Setup 打包失败' }
