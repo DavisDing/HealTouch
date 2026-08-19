@@ -38,9 +38,16 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $actualVersion = (& mvn --version | Select-Object -First 1)
+          # Do not pipe the native Maven process to Select-Object -First 1.  That command
+          # closes the pipe after the first line and can make Maven/Java exit with code 1.
+          $mavenOutput = @(& mvn --version 2>&1)
+          $exitCode = $LASTEXITCODE
+          if ($exitCode -ne 0) {
+            throw "Maven version command failed with exit code ${exitCode}:`n$($mavenOutput -join [Environment]::NewLine)"
+          }
+          $actualVersion = [string]$mavenOutput[0]
           if ($actualVersion -notmatch 'Apache Maven 3\.') { throw "Expected Apache Maven 3.x, but found: $actualVersion" }
-          Write-Host $actualVersion
+          Write-Host $mavenOutput
       - name: Resolve Maven dependencies and build plugins
         run: mvn --batch-mode --errors dependency:go-offline
       - name: Compile, migrate and test
@@ -81,9 +88,16 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $actualVersion = (& mvn --version | Select-Object -First 1)
+          # Do not pipe the native Maven process to Select-Object -First 1.  That command
+          # closes the pipe after the first line and can make Maven/Java exit with code 1.
+          $mavenOutput = @(& mvn --version 2>&1)
+          $exitCode = $LASTEXITCODE
+          if ($exitCode -ne 0) {
+            throw "Maven version command failed with exit code ${exitCode}:`n$($mavenOutput -join [Environment]::NewLine)"
+          }
+          $actualVersion = [string]$mavenOutput[0]
           if ($actualVersion -notmatch 'Apache Maven 3\.') { throw "Expected Apache Maven 3.x, but found: $actualVersion" }
-          Write-Host $actualVersion
+          Write-Host $mavenOutput
       - name: Resolve Maven dependencies and build plugins
         run: mvn --batch-mode --errors dependency:go-offline
       - name: Prepare installer version
