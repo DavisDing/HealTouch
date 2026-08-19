@@ -16,27 +16,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up Temurin Java 8
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '8'
           cache: maven
-      - name: Install and verify Maven 3.9.16
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $version = '3.9.16'
-          $archiveBase = "https://archive.apache.org/dist/maven/maven-3/$version/binaries/apache-maven-$version-bin.zip"
-          $zip = Join-Path $env:RUNNER_TEMP "apache-maven-$version-bin.zip"
-          $mavenHome = Join-Path $env:RUNNER_TEMP "apache-maven-$version"
-          Invoke-WebRequest -Uri $archiveBase -OutFile $zip
-          $expectedHash = ((Invoke-WebRequest -Uri "$archiveBase.sha512").Content -split '\s+')[0].ToLowerInvariant()
-          $actualHash = (Get-FileHash -Path $zip -Algorithm SHA512).Hash.ToLowerInvariant()
-          if ($actualHash -ne $expectedHash) { throw 'Maven 3.9.16 SHA-512 校验失败。' }
-          Expand-Archive -Path $zip -DestinationPath $env:RUNNER_TEMP -Force
-          if (-not (Test-Path (Join-Path $mavenHome 'bin\mvn.cmd'))) { throw 'Maven 3.9.16 解压结果不完整。' }
-          (Join-Path $mavenHome 'bin') | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-      - name: Confirm Maven version
+      - name: Verify runner Maven 3.9.16
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
@@ -54,7 +39,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '8'
@@ -64,22 +49,7 @@ jobs:
         run: |
           choco install launch4j --version=3.50 --no-progress --yes
           choco install innosetup --version=6.2.2 --no-progress --yes
-      - name: Install and verify Maven 3.9.16
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $version = '3.9.16'
-          $archiveBase = "https://archive.apache.org/dist/maven/maven-3/$version/binaries/apache-maven-$version-bin.zip"
-          $zip = Join-Path $env:RUNNER_TEMP "apache-maven-$version-bin.zip"
-          $mavenHome = Join-Path $env:RUNNER_TEMP "apache-maven-$version"
-          Invoke-WebRequest -Uri $archiveBase -OutFile $zip
-          $expectedHash = ((Invoke-WebRequest -Uri "$archiveBase.sha512").Content -split '\s+')[0].ToLowerInvariant()
-          $actualHash = (Get-FileHash -Path $zip -Algorithm SHA512).Hash.ToLowerInvariant()
-          if ($actualHash -ne $expectedHash) { throw 'Maven 3.9.16 SHA-512 校验失败。' }
-          Expand-Archive -Path $zip -DestinationPath $env:RUNNER_TEMP -Force
-          if (-not (Test-Path (Join-Path $mavenHome 'bin\mvn.cmd'))) { throw 'Maven 3.9.16 解压结果不完整。' }
-          (Join-Path $mavenHome 'bin') | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-      - name: Confirm Maven version
+      - name: Verify runner Maven 3.9.16
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
