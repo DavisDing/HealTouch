@@ -1,2 +1,6 @@
 package com.healtouch.model;
-public enum PatientType { ADULT, CHILD }
+
+public enum PatientType {
+  ADULT,
+  CHILD
+}

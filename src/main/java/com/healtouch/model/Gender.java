@@ -1,2 +1,7 @@
 package com.healtouch.model;
-public enum Gender { MALE, FEMALE, UNKNOWN }
+
+public enum Gender {
+  MALE,
+  FEMALE,
+  UNKNOWN
+}

@@ -702,6 +702,6 @@ mvn clean package
 java -jar target/healtouch-1.0.0-SNAPSHOT-shaded.jar
 ```
 
-首次启动会在用户目录创建 `HealTouch/healtouch.db`，不会写入安装目录。默认账号为 `admin`，初始密码为 `Admin@123`，首次登录必须修改密码。
+首次启动会在用户目录创建 `HealTouch/healtouch.db`，不会写入安装目录。首次启动时，软件会要求操作者为管理员账号 `admin` 设置密码；该密码不会以明文内置或显示在界面中。
 
 > 生产发布时，GitHub Actions 中的 `HEALTOUCH_RUNTIME_X86_URL`、`HEALTOUCH_RUNTIME_X64_URL` 及对应的 SHA-256 Secrets 必须配置为经审计、固定版本的 JavaFX 8 Runtime；其内容随对应安装包内置，不存储任何业务数据。
