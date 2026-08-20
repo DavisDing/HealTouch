@@ -76,6 +76,7 @@
 
 | 日期 | 操作 | 结果 |
 | --- | --- | --- |
+| 2026-08-20 | 配置 GitHub Actions 自动版本与 Release，并验证版本计算逻辑 | 修改 `.github/workflows/build.yml`：每次 `main` 提交自动递增第二位（次版本号）并在打包成功后创建标签和 GitHub Release；手动 `workflow_dispatch` 选择 `major` 时第一位加一并重置后两位。使用 Ruby 标准库解析 YAML；在 `/private/tmp/healtouch-version-test.*` 创建临时 Git 仓库和 Bash 脚本，验证首个版本 `1.0.0`、次版本递增 `1.10.0`、主版本递增 `2.0.0`，命令退出时已清理该临时目录。未安装、升级、下载或卸载任何软件。 |
 | 2026-08-18 | 克隆 HealTouch Git 仓库 | 项目源代码位于 `/Users/dinghao/Downloads/HealTouch` |
 | 2026-08-19 | 检查本机 Homebrew、项目配置和缓存位置 | 确认第 1 节所列包当前存在；未执行安装、升级、卸载操作 |
 | 2026-08-19 | 创建 / 更新本记录文件 | 本文件 |

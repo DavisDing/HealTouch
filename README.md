@@ -639,8 +639,10 @@ SQLite 本地数据库
 **工作流要求**：
 
 - 工作流文件统一放在 `.github/workflows/` 目录。
-- Pull Request 时执行 Java 编译、依赖检查、数据库迁移检查和自动化测试；每次推送到主分支都会在上述检查通过后，自动生成 x86/x64 Windows 安装包并保存为 Actions Artifact。
-- 创建版本标签（格式如 `v1.0.0`）时，执行同一套正式构建，生成 x86 与 x64 两个 Windows 安装包，并自动创建 GitHub Release。
+- Pull Request 时执行 Java 编译、依赖检查、数据库迁移检查和自动化测试，不创建发布产物。
+- 每次推送到 `main` 都会在检查通过后自动计算下一个稳定版本、生成 x86/x64 Windows 安装包、创建对应 Git 标签并创建 GitHub Release；安装包和校验文件同时保存为 Actions Artifact。
+- 自动版本从 `v1.0.0` 开始；之后每次提交 `main` 将第二位（次版本号）递增并将末位归零，例如 `v1.0.0`、`v1.1.0`、`v1.2.0`。工作流使用并发锁，确保同时到达的提交不会取得相同版本号。
+- 需要发布新的主版本时，在 GitHub Actions 的 **Build and release HealTouch** 页面点击 **Run workflow**，选择 `major` 并以 `main` 为分支运行；工作流会将第一位版本号加一并重置后两位，例如从 `v1.8.0` 发布为 `v2.0.0`。手动选择 `minor` 则与自动提交相同，按第二位递增。
 - Windows 构建任务使用 `windows-latest` runner；Java 8 由工作流明确选择 BellSoft Liberica 的 `jdk+fx` 包。Launch4j 使用 Chocolatey 当前可用的固定版本 `3.14`；Inno Setup 优先使用 Runner 预装版本（当前为 6.7.1），若未来 Runner 移除该命令才通过 Chocolatey 安装备选版本。由于 Chocolatey 的 Launch4j 安装包不创建命令行 shim，且原生 `launch4jc.exe` 依赖传统 Windows JRE 发现方式，工作流会显式定位 `launch4j.jar`，再由已配置的 Java 8 直接运行它；同时确认 `iscc` 可用，避免因 Runner 镜像、PATH 或 JRE 注册表状态变化在真正打包时才失败。
 - CI 使用 BellSoft Liberica JDK 8 的 `jdk+fx` 包，其中包含 JavaFX 8，因此 Maven 可直接编译 `javafx.*` 源码。打包任务会分别准备 x64 与 x86 的 `jdk+fx`，验证各自的 JavaFX 运行时和 32/64 位位数后，将 JDK 内置的 `jre/` 复制到对应安装包；不再依赖手工配置 Runtime 下载地址或 SHA-256 Secrets。JavaFX 不作为 Maven 依赖或 Shade 内容加入应用 JAR。
 - 打包前执行清理构建，禁止将本地数据库、用户数据、日志和备份文件打入安装包。
@@ -654,7 +656,7 @@ HealTouch-<version>-x64-Setup.exe
 SHA256SUMS.txt
 ```
 
-构建产物作为 GitHub Actions Artifact 保存；正式版本同时创建 GitHub Release，并上传两个安装包及校验文件。版本号来自 Git 标签（去掉 `v` 前缀），并写入安装包文件名；主分支的非正式构建使用 `0.0.0.<GitHub run number>` 作为可追溯版本号。
+构建产物作为 GitHub Actions Artifact 保存；每个成功的 `main` 构建都会创建正式 GitHub Release，并上传两个安装包及校验文件。工作流先从现有稳定 Git 标签计算版本，再将去掉 `v` 前缀的版本号写入安装包文件名；只有在安装包和 SHA-256 校验文件全部生成成功后，才创建 Git 标签和 Release。
 
 **运行时准备方式**：工作流通过 `actions/setup-java@v5` 直接取得 BellSoft Liberica Java 8 `jdk+fx` 的 x64 与 x86 版本，并从每个 JDK 的 `jre/` 目录构建安装包内置运行时。无需配置 `HEALTOUCH_RUNTIME_*` GitHub Actions Secrets，也无需在仓库提交 Runtime ZIP 文件。
 
@@ -663,7 +665,7 @@ SHA256SUMS.txt
 - 任一编译、测试、数据库迁移检查、打包或完整性校验失败，工作流必须失败，不得发布不完整安装包。
 - 正式发布前生成两个安装包的 SHA-256 校验值。
 - GitHub Actions 不保存患者数据、生产数据库、备份口令或其他敏感信息；签名证书等凭据只能保存在 GitHub Actions Secrets 中。
-- 工作流保留构建日志和版本产物，发布权限仅限受保护的主分支或正式版本标签。
+- 工作流保留构建日志和版本产物；发布权限仅授予 Release Job，且该 Job 仅能从受保护的 `main` 分支运行。
 
 # HealTouch
 
@@ -677,7 +679,7 @@ SHA256SUMS.txt
 - `src/main/java/com/healtouch/service/`：患者、项目、治疗登记、全额收费、预存、退款审批/执行、认证和审计等事务服务。
 - `src/main/java/com/healtouch/ui/`：JavaFX 登录、工作台、患者、治疗收费、账单、预存、用户和项目管理页面。
 - `src/test/`：覆盖小儿监护人校验、全额收费和预存扣款的核心流程测试。
-- `.github/workflows/build.yml`：PR 验证、每次推送 `main` 的 Windows x86/x64 安装包 Artifact，以及 `vX.Y.Z` 标签的 SHA-256 和 Release 发布流程。
+- `.github/workflows/build.yml`：PR 验证、`main` 自动递增次版本号并发布 Windows x86/x64 安装包、SHA-256 与 GitHub Release，以及手动主版本发布入口。
 
 ### 本地运行
 

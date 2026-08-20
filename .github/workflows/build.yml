@@ -1,14 +1,28 @@
-name: Build and package HealTouch
+name: Build and release HealTouch
 
 on:
   pull_request:
   push:
     branches: [main]
-    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Version increment for a manual release'
+        required: true
+        default: minor
+        type: choice
+        options:
+          - minor
+          - major
 
-# Verify jobs need only repository reads. The Release job receives write access separately.
+# Verification and packaging need only repository reads. The Release job receives write access separately.
 permissions:
   contents: read
+
+# Release runs must calculate and reserve versions one at a time so concurrent pushes cannot reuse a tag.
+concurrency:
+  group: healtouch-main-release
+  cancel-in-progress: false
 
 jobs:
   verify:
@@ -54,11 +68,64 @@ jobs:
       - name: Compile, migrate and test
         run: mvn --batch-mode --errors clean verify
 
-  package:
-    # Every push to main creates testable Windows installers after the verification job.
-    # Pull requests run verification only and never generate release artifacts.
+  version:
+    # Only commits on main may create a release. workflow_dispatch is the manual major-release entry point.
     needs: verify
-    if: github.event_name == 'push'
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.next-version.outputs.version }}
+      tag: ${{ steps.next-version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: next-version
+        name: Calculate next release version
+        shell: bash
+        env:
+          VERSION_BUMP: ${{ inputs.version_bump || 'minor' }}
+        run: |
+          set -euo pipefail
+          git fetch --force --tags
+
+          case "$VERSION_BUMP" in
+            minor|major) ;;
+            *) echo "Unsupported version bump: $VERSION_BUMP" >&2; exit 1 ;;
+          esac
+
+          # Only stable vMAJOR.MINOR.PATCH tags participate in automatic versioning.
+          latest="$({ git tag --list | awk '/^v[0-9]+\.[0-9]+\.[0-9]+$/ { sub(/^v/, ""); print }'; } | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1)"
+          if [[ -z "$latest" ]]; then
+            # The first release establishes the 1.x line, matching the project version baseline.
+            version='1.0.0'
+          else
+            IFS='.' read -r major minor patch <<< "$latest"
+            major=$((10#$major))
+            minor=$((10#$minor))
+            patch=$((10#$patch))
+            if [[ "$VERSION_BUMP" == 'major' ]]; then
+              version="$((major + 1)).0.0"
+            else
+              version="${major}.$((minor + 1)).0"
+            fi
+          fi
+
+          tag="v$version"
+          if git rev-parse --verify --quiet "refs/tags/$tag" >/dev/null; then
+            echo "Release tag already exists: $tag" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Preparing release $tag from $GITHUB_SHA"
+
+  package:
+    # Pull requests verify only. Every successful main push produces a versioned release package.
+    needs: [verify, version]
+    if: needs.verify.result == 'success' && needs.version.result == 'success'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
@@ -144,12 +211,7 @@ jobs:
       - name: Prepare installer version
         shell: powershell
         run: |
-          if ('${{ github.ref_type }}' -eq 'tag') {
-            $version = '${{ github.ref_name }}'.TrimStart('v')
-          } else {
-            # Inno Setup accepts a four-part numeric version. This identifies a main-branch CI build.
-            $version = '0.0.0.${{ github.run_number }}'
-          }
+          $version = '${{ needs.version.outputs.version }}'
           "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Build application
         run: mvn --batch-mode --errors clean package -DskipTests
@@ -235,22 +297,28 @@ jobs:
             Set-Content target\installer\SHA256SUMS.txt -Encoding ascii
       - uses: actions/upload-artifact@v4
         with:
-          name: HealTouch-${{ github.ref_name }}-${{ github.sha }}
+          name: HealTouch-${{ needs.version.outputs.tag }}-${{ github.sha }}
           path: target/installer/*
           if-no-files-found: error
 
   release:
-    needs: package
-    if: github.ref_type == 'tag'
+    # A tag and GitHub Release are created only after both installers and checksums exist.
+    needs: [package, version]
+    if: needs.package.result == 'success' && needs.version.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: HealTouch-${{ github.ref_name }}-${{ github.sha }}
+          name: HealTouch-${{ needs.version.outputs.tag }}-${{ github.sha }}
           path: release-assets
-      - uses: softprops/action-gh-release@v2
+      - name: Create GitHub Release and tag
+        uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: HealTouch ${{ needs.version.outputs.tag }}
+          generate_release_notes: true
           files: release-assets/*
           fail_on_unmatched_files: true
