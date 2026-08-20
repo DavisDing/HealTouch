@@ -67,11 +67,28 @@ jobs:
           java-version: '8'
           java-package: jdk+fx
           cache: maven
-      - name: Install pinned Windows packagers
+      - name: Install and verify Windows packagers
         shell: powershell
         run: |
-          choco install launch4j --version=3.50 --no-progress --yes
-          choco install innosetup --version=6.2.2 --no-progress --yes
+          $ErrorActionPreference = 'Stop'
+          # Chocolatey currently publishes Launch4j 3.14; version 3.50 does not exist in
+          # the configured Chocolatey source.  Allow a downgrade if a future runner image
+          # happens to preinstall a newer copy so this workflow remains deterministic.
+          & choco install launch4j --version=3.14 --allow-downgrade --no-progress --yes
+          if ($LASTEXITCODE -ne 0) { throw "Launch4j installation failed with exit code $LASTEXITCODE." }
+
+          # Inno Setup is preinstalled on the GitHub Windows image.  Only bootstrap it when
+          # a future image removes it; do not force a downgrade of the runner-provided copy.
+          if ($null -eq (Get-Command iscc -ErrorAction SilentlyContinue)) {
+            & choco install innosetup --no-progress --yes
+            if ($LASTEXITCODE -ne 0) { throw "Inno Setup installation failed with exit code $LASTEXITCODE." }
+          }
+
+          foreach ($commandName in @('launch4jc', 'iscc')) {
+            $command = Get-Command $commandName -ErrorAction SilentlyContinue
+            if ($null -eq $command) { throw "Required packager command was not found: $commandName" }
+            Write-Host "$commandName=$($command.Source)"
+          }
       - name: Verify Java 8 and JavaFX toolchain
         shell: powershell
         run: |
