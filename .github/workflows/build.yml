@@ -21,6 +21,7 @@ jobs:
           distribution: liberica
           java-version: '8'
           java-package: jdk+fx
+          architecture: x64
           cache: maven
       - name: Verify Java 8 and JavaFX toolchain
         shell: powershell
@@ -54,8 +55,8 @@ jobs:
         run: mvn --batch-mode --errors clean verify
 
   package:
-    # Every push to main creates testable Windows installers. Pull requests only verify,
-    # so their untrusted code never receives access to repository secrets.
+    # Every push to main creates testable Windows installers after the verification job.
+    # Pull requests run verification only and never generate release artifacts.
     needs: verify
     if: github.event_name == 'push'
     runs-on: windows-latest
@@ -66,7 +67,15 @@ jobs:
           distribution: liberica
           java-version: '8'
           java-package: jdk+fx
+          architecture: x64
           cache: maven
+      - name: Remember x64 JavaFX JDK for packaging
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ([string]::IsNullOrWhiteSpace($env:JAVA_HOME)) { throw 'actions/setup-java did not set JAVA_HOME for the x64 JDK.' }
+          "HEALTOUCH_JDK_X64=$env:JAVA_HOME" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "x64 JDK=$env:JAVA_HOME"
       - name: Install and verify Windows packagers
         shell: powershell
         run: |
@@ -141,41 +150,46 @@ jobs:
           "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Build application
         run: mvn --batch-mode --errors clean package -DskipTests
-      - name: Download and verify JavaFX 8 x86 and x64 runtimes
+      - name: Set up Liberica Java 8 with JavaFX for x86 runtime
+        uses: actions/setup-java@v5
+        with:
+          distribution: liberica
+          java-version: '8'
+          java-package: jdk+fx
+          architecture: x86
+      - name: Prepare and verify bundled JavaFX 8 runtimes
         shell: powershell
-        env:
-          HEALTOUCH_RUNTIME_X86_URL: ${{ secrets.HEALTOUCH_RUNTIME_X86_URL }}
-          HEALTOUCH_RUNTIME_X64_URL: ${{ secrets.HEALTOUCH_RUNTIME_X64_URL }}
-          HEALTOUCH_RUNTIME_X86_SHA256: ${{ secrets.HEALTOUCH_RUNTIME_X86_SHA256 }}
-          HEALTOUCH_RUNTIME_X64_SHA256: ${{ secrets.HEALTOUCH_RUNTIME_X64_SHA256 }}
         run: |
           $ErrorActionPreference = 'Stop'
           $runtimes = @(
-            @{ Architecture = 'x86'; Url = $env:HEALTOUCH_RUNTIME_X86_URL; Sha256 = $env:HEALTOUCH_RUNTIME_X86_SHA256 },
-            @{ Architecture = 'x64'; Url = $env:HEALTOUCH_RUNTIME_X64_URL; Sha256 = $env:HEALTOUCH_RUNTIME_X64_SHA256 }
+            @{ Architecture = 'x86'; JdkHome = $env:JAVA_HOME; ExpectedBits = '32' },
+            @{ Architecture = 'x64'; JdkHome = $env:HEALTOUCH_JDK_X64; ExpectedBits = '64' }
           )
           foreach ($runtime in $runtimes) {
-            if ([string]::IsNullOrWhiteSpace($runtime.Url) -or [string]::IsNullOrWhiteSpace($runtime.Sha256)) {
-              throw "Configure the $($runtime.Architecture) JavaFX 8 Runtime URL and SHA-256 GitHub Actions secrets."
+            if ([string]::IsNullOrWhiteSpace($runtime.JdkHome)) {
+              throw "The $($runtime.Architecture) JavaFX JDK location is missing."
             }
-            $zip = Join-Path $env:RUNNER_TEMP "healtouch-runtime-$($runtime.Architecture).zip"
-            $expanded = Join-Path $env:RUNNER_TEMP "healtouch-runtime-$($runtime.Architecture)"
+            $runtimeHome = Join-Path $runtime.JdkHome 'jre'
+            $java = Join-Path $runtimeHome 'bin\java.exe'
+            $javaFx = Join-Path $runtimeHome 'lib\ext\jfxrt.jar'
+            if (-not (Test-Path -LiteralPath $java -PathType Leaf)) {
+              throw "The $($runtime.Architecture) JDK does not contain the expected bundled runtime: $java"
+            }
+            if (-not (Test-Path -LiteralPath $javaFx -PathType Leaf)) {
+              throw "The $($runtime.Architecture) bundled runtime does not contain JavaFX 8: $javaFx"
+            }
+            $properties = @(& $java -XshowSettings:properties -version 2>&1)
+            if ($LASTEXITCODE -ne 0) {
+              throw "Unable to start the $($runtime.Architecture) bundled runtime: $($properties -join [Environment]::NewLine)"
+            }
+            $bitnessPattern = "(?m)^\s*sun\.arch\.data\.model\s*=\s*$($runtime.ExpectedBits)\s*$"
+            if (($properties -join [Environment]::NewLine) -notmatch $bitnessPattern) {
+              throw "The JDK selected for $($runtime.Architecture) did not report $($runtime.ExpectedBits)-bit Java."
+            }
             $destination = Join-Path 'runtime' $runtime.Architecture
-            Invoke-WebRequest -Uri $runtime.Url -OutFile $zip
-            $actualHash = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLowerInvariant()
-            if ($actualHash -ne $runtime.Sha256.ToLowerInvariant()) {
-              throw "$($runtime.Architecture) Runtime SHA-256 verification failed."
-            }
-            Expand-Archive -Path $zip -DestinationPath $expanded -Force
-            $java = Get-ChildItem -Path $expanded -Filter java.exe -File -Recurse |
-              Where-Object { $_.Directory.Name -eq 'bin' } | Select-Object -First 1
-            if ($null -eq $java) { throw "$($runtime.Architecture) Runtime does not contain bin\\java.exe." }
-            $runtimeHome = Split-Path -Parent $java.Directory.FullName
-            if (-not (Get-ChildItem -Path $runtimeHome -Filter jfxrt.jar -File -Recurse | Select-Object -First 1)) {
-              throw "$($runtime.Architecture) Runtime does not include JavaFX 8 (jfxrt.jar)."
-            }
             New-Item -ItemType Directory -Path $destination -Force | Out-Null
             Copy-Item -Path (Join-Path $runtimeHome '*') -Destination $destination -Recurse -Force
+            Write-Host "Prepared $($runtime.Architecture) JavaFX runtime from $runtimeHome"
           }
       - name: Build x86 installer
         shell: powershell

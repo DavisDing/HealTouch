@@ -642,7 +642,7 @@ SQLite 本地数据库
 - Pull Request 时执行 Java 编译、依赖检查、数据库迁移检查和自动化测试；每次推送到主分支都会在上述检查通过后，自动生成 x86/x64 Windows 安装包并保存为 Actions Artifact。
 - 创建版本标签（格式如 `v1.0.0`）时，执行同一套正式构建，生成 x86 与 x64 两个 Windows 安装包，并自动创建 GitHub Release。
 - Windows 构建任务使用 `windows-latest` runner；Java 8 由工作流明确选择 BellSoft Liberica 的 `jdk+fx` 包。Launch4j 使用 Chocolatey 当前可用的固定版本 `3.14`；Inno Setup 优先使用 Runner 预装版本（当前为 6.7.1），若未来 Runner 移除该命令才通过 Chocolatey 安装备选版本。由于 Chocolatey 的 Launch4j 安装包不创建 `launch4jc` 的命令行 shim，工作流会显式定位 `launch4jc.exe` 并将路径传给后续打包脚本；同时确认 `iscc` 可用，避免因 Runner 镜像或 PATH 变化在真正打包时才失败。
-- CI 使用 BellSoft Liberica JDK 8 的 `jdk+fx` 包，其中包含 JavaFX 8，因此 Maven 可直接编译 `javafx.*` 源码。JavaFX 不作为 Maven 依赖或 Shade 内容加入应用 JAR；正式安装包运行时仍使用随安装包内置的 JavaFX 8 Runtime。
+- CI 使用 BellSoft Liberica JDK 8 的 `jdk+fx` 包，其中包含 JavaFX 8，因此 Maven 可直接编译 `javafx.*` 源码。打包任务会分别准备 x64 与 x86 的 `jdk+fx`，验证各自的 JavaFX 运行时和 32/64 位位数后，将 JDK 内置的 `jre/` 复制到对应安装包；不再依赖手工配置 Runtime 下载地址或 SHA-256 Secrets。JavaFX 不作为 Maven 依赖或 Shade 内容加入应用 JAR。
 - 打包前执行清理构建，禁止将本地数据库、用户数据、日志和备份文件打入安装包。
 - CI 在编译前执行 JDK 8 / JavaFX 可用性检查，并使用固定版本的 `maven-dependency-plugin` 预解析所有 Maven 依赖与构建插件；这会将“依赖无法解析”和“JDK 不含 JavaFX”的问题提前标记为明确失败步骤。
 
@@ -656,16 +656,7 @@ SHA256SUMS.txt
 
 构建产物作为 GitHub Actions Artifact 保存；正式版本同时创建 GitHub Release，并上传两个安装包及校验文件。版本号来自 Git 标签（去掉 `v` 前缀），并写入安装包文件名；主分支的非正式构建使用 `0.0.0.<GitHub run number>` 作为可追溯版本号。
 
-**首次启用前的仓库配置**：在 GitHub 仓库的 **Settings → Secrets and variables → Actions** 中创建下列 Repository secrets。运行时压缩包必须是受控、可长期访问的 Windows Java 8（含 JavaFX）运行时；工作流会校验 SHA-256，校验失败即停止发布。
-
-| Secret | 内容 |
-| --- | --- |
-| `HEALTOUCH_RUNTIME_X86_URL` | x86 JavaFX 8 Runtime ZIP 的 HTTPS 下载地址 |
-| `HEALTOUCH_RUNTIME_X86_SHA256` | 该 x86 ZIP 的 64 位十六进制 SHA-256 值 |
-| `HEALTOUCH_RUNTIME_X64_URL` | x64 JavaFX 8 Runtime ZIP 的 HTTPS 下载地址 |
-| `HEALTOUCH_RUNTIME_X64_SHA256` | 该 x64 ZIP 的 64 位十六进制 SHA-256 值 |
-
-> 不要在仓库中提交运行时 ZIP、下载凭据或签名证书。推送到 `main` 后可在 **Actions** 页面下载构建产物；推送例如 `v1.0.0` 的标签后会额外创建正式 Release。
+**运行时准备方式**：工作流通过 `actions/setup-java@v5` 直接取得 BellSoft Liberica Java 8 `jdk+fx` 的 x64 与 x86 版本，并从每个 JDK 的 `jre/` 目录构建安装包内置运行时。无需配置 `HEALTOUCH_RUNTIME_*` GitHub Actions Secrets，也无需在仓库提交 Runtime ZIP 文件。
 
 **质量门禁与安全要求**：
 
@@ -706,4 +697,4 @@ java -jar target/healtouch-1.0.0-SNAPSHOT-shaded.jar
 
 首次启动会在用户目录创建 `HealTouch/healtouch.db`，不会写入安装目录。首次启动时，软件会要求操作者为管理员账号 `admin` 设置密码；该密码不会以明文内置或显示在界面中。
 
-> 生产发布时，GitHub Actions 中的 `HEALTOUCH_RUNTIME_X86_URL`、`HEALTOUCH_RUNTIME_X64_URL` 及对应的 SHA-256 Secrets 必须配置为经审计、固定版本的 JavaFX 8 Runtime；其内容随对应安装包内置，不存储任何业务数据。
+> 生产发布时，GitHub Actions 会从 `actions/setup-java` 提供的 x86/x64 BellSoft Liberica Java 8 `jdk+fx` 中取得经工作流验证的内置 JavaFX Runtime；运行时随对应安装包内置，不存储任何业务数据。

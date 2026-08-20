@@ -49,11 +49,11 @@
 
 | 工具 / 内容 | 版本 | 使用位置 | 用途 | 本机状态 |
 | --- | --- | --- | --- | --- |
-| BellSoft Liberica JDK + FX / Java 8 | 工作流固定 Java 8，`jdk+fx` 包 | GitHub Actions Windows Runner | 编译含 JavaFX 的 Java 8 项目 | 未发现本机对应 Java 8 / JavaFX 安装记录 |
+| BellSoft Liberica JDK + FX / Java 8 | 工作流分别取得 x64 与 x86 的 Java 8 `jdk+fx` 包 | GitHub Actions Windows Runner 临时工具缓存 | 编译 JavaFX 项目，并从各 JDK 的 `jre/` 准备 x64/x86 安装包运行时 | 未发现本机对应 Java 8 / JavaFX 安装记录 |
 | Apache Maven | 3.9.16 | GitHub Actions Windows Runner | CI 构建、测试、打包 | 本机另有 Homebrew Maven，见第 1 节 |
 | Launch4j | 3.14 | GitHub Actions 通过 Chocolatey 安装（当前公开源可用的固定版本） | 将 JAR 包装为 Windows `.exe` | 未发现本机安装 |
 | Inno Setup | Runner 预装版本（当前日志显示为 6.7.1）；缺失时通过 Chocolatey 安装 | GitHub-hosted Windows Runner；工作流仅在 `iscc` 命令缺失时安装 | 生成 Windows 安装程序 | 未发现本机安装 |
-| JavaFX 8 x86/x64 Runtime | 由 GitHub Secrets 指定压缩包 | Runner 临时目录 / 构建时 `runtime/` | 随 Windows 安装包提供运行时 | 未发现本机安装 |
+| JavaFX 8 x86/x64 Runtime | 来自对应架构 Liberica JDK 8 `jdk+fx` 的内置 `jre/` | Runner 临时目录 / 构建时 `runtime/` | 随 Windows 安装包提供运行时；工作流验证 JavaFX 文件与位数 | 未发现本机安装 |
 
 ## 4. Codex 插件 / 技能
 
@@ -83,6 +83,7 @@
 | 2026-08-19 | 增加 CI 构建前自检 | 使用 `javap` 检查 JavaFX 类是否存在，并通过 `maven-dependency-plugin:3.6.1:go-offline` 预解析 Maven 依赖和构建插件；仅在 GitHub-hosted Runner 的临时环境下载缓存，未在本机安装或下载 |
 | 2026-08-20 | 查询并修正 GitHub Actions Windows 打包工具配置 | 查询 Chocolatey 公共 V2 源：`launch4j` 当前可安装的最新版是 `3.14`，不存在配置中的 `3.50`；GitHub Runner 日志显示已预装 Inno Setup `6.7.1`，因此移除会触发降级失败的固定安装。工作流改为安装 Launch4j 3.14、按需安装 Inno Setup，并在打包前检查 `launch4jc` / `iscc` 命令；未在本机安装、升级或下载软件。 |
 | 2026-08-20 | 检查 Chocolatey Launch4j 包安装布局并修正命令路径 | 临时下载 `launch4j.3.14.nupkg` 至 `/private/tmp/healtouch-launch4j-choco-inspect/launch4j.3.14.nupkg` 进行只读检查，确认该包调用原始安装程序且不创建 `launch4jc` Chocolatey shim。因此工作流改为从 `Program Files (x86)\Launch4j\launch4jc.exe` 或 `Program Files\Launch4j\launch4jc.exe` 显式定位程序，并经 `HEALTOUCH_LAUNCH4JC` 传入打包脚本。临时目录可在项目结束时清理；未在本机安装、升级或卸载软件。 |
+| 2026-08-20 | 移除 JavaFX Runtime 下载 Secrets 依赖 | CI 已成功取得 Liberica JDK 8 `jdk+fx`；工作流改为保留 x64 JDK，并额外通过 `actions/setup-java@v5` 取得 x86 JDK，从两个 JDK 内置的 `jre/` 复制运行时。复制前检查 `jfxrt.jar`、`java.exe` 及 32/64 位属性，因此不再需要 `HEALTOUCH_RUNTIME_X86_*` / `HEALTOUCH_RUNTIME_X64_*` Secrets。仅发生在 GitHub-hosted Runner 临时环境，未在本机安装或下载软件。 |
 | 2026-08-19 | 排查 GitHub Actions 打包失败并进行本地验证 | 只读查询公开 GitHub Actions API，确认运行 `32227961421` 在 `Verify runner Maven 3.9.16` 失败；该固定补丁版本检查已改为仅要求 Maven 3.x。本地曾使用 `mvn --batch-mode --errors -Dmaven.repo.local=target/maven-repository clean verify` 临时下载项目级 Maven 依赖到项目内 `target/`，未全局安装；因本机受限网络的后续重试失败，输出保存到 `/private/tmp/healtouch-local-compile.log`。另建 `/private/tmp/healtouch-actions-32227961421/` 以尝试下载公开作业日志，但 API 返回 403；两处临时文件均可在项目结束时清理。 |
 | 2026-08-19 | 修复 GitHub Actions Maven 版本检查退出码异常 | GitHub Windows Runner 中 `mvn --version | Select-Object -First 1` 仅输出版本后仍以退出码 1 结束；改为先完整捕获 `mvn --version` 输出和退出码，再读取第一行验证 Maven 3.x，以避免 PowerShell 提前关闭原生命令管道。未安装、升级或卸载任何软件；未生成项目外文件。 |
 
