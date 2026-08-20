@@ -178,12 +178,28 @@ jobs:
             if (-not (Test-Path -LiteralPath $javaFx -PathType Leaf)) {
               throw "The $($runtime.Architecture) bundled runtime does not contain JavaFX 8: $javaFx"
             }
-            $properties = @(& $java -XshowSettings:properties -version 2>&1)
-            if ($LASTEXITCODE -ne 0) {
-              throw "Unable to start the $($runtime.Architecture) bundled runtime: $($properties -join [Environment]::NewLine)"
+            # java -XshowSettings writes property settings to stderr.  Do not use PowerShell
+            # 2>&1 here: with ErrorActionPreference=Stop, stderr is promoted to a terminating
+            # NativeCommandError even when java exits successfully.  Capture both streams via
+            # ProcessStartInfo instead.
+            $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+            $startInfo.FileName = $java
+            $startInfo.Arguments = '-XshowSettings:properties -version'
+            $startInfo.UseShellExecute = $false
+            $startInfo.RedirectStandardOutput = $true
+            $startInfo.RedirectStandardError = $true
+            $process = New-Object System.Diagnostics.Process
+            $process.StartInfo = $startInfo
+            [void]$process.Start()
+            $standardOutput = $process.StandardOutput.ReadToEnd()
+            $standardError = $process.StandardError.ReadToEnd()
+            $process.WaitForExit()
+            $properties = $standardOutput + [Environment]::NewLine + $standardError
+            if ($process.ExitCode -ne 0) {
+              throw "Unable to start the $($runtime.Architecture) bundled runtime: $properties"
             }
             $bitnessPattern = "(?m)^\s*sun\.arch\.data\.model\s*=\s*$($runtime.ExpectedBits)\s*$"
-            if (($properties -join [Environment]::NewLine) -notmatch $bitnessPattern) {
+            if ($properties -notmatch $bitnessPattern) {
               throw "The JDK selected for $($runtime.Architecture) did not report $($runtime.ExpectedBits)-bit Java."
             }
             $destination = Join-Path 'runtime' $runtime.Architecture
