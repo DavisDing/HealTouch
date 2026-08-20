@@ -208,6 +208,7 @@ public class BillingService {
           BillSummary b = new BillSummary();
           b.id = rs.getLong("id");
           b.billCode = rs.getString("bill_code");
+          b.patientId = rs.getLong("patient_id");
           b.patientName = rs.getString("patient_name");
           b.treatmentDate = LocalDate.parse(rs.getString("treatment_date"));
           b.therapistName = rs.getString("therapist_name_snapshot");

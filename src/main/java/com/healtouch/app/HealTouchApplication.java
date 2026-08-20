@@ -22,11 +22,20 @@ public class HealTouchApplication extends Application {
   }
 
   public void showLogin() {
-    stage.setScene(new Scene(new LoginView(services, this::onLogin).node(), 460, 330));
+    Scene scene = new Scene(new LoginView(services, this::onLogin).node(), 520, 430);
+    applyTheme(scene);
+    stage.setScene(scene);
   }
 
   private void onLogin(UserSession session) {
-    stage.setScene(new Scene(new MainView(services, session, this::showLogin).node(), 1180, 760));
+    Scene scene = new Scene(new MainView(services, session, this::showLogin).node(), 1240, 800);
+    applyTheme(scene);
+    stage.setScene(scene);
+  }
+
+  private void applyTheme(Scene scene) {
+    scene.getStylesheets().add(
+        HealTouchApplication.class.getResource("/styles/healtouch.css").toExternalForm());
   }
 
   @Override

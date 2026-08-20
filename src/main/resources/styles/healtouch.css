@@ -1,0 +1,42 @@
+.root {
+  -fx-font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", Arial, sans-serif;
+  -fx-background-color: #f5f8fb;
+  -fx-text-fill: #18324a;
+}
+.label { -fx-text-fill: #18324a; }
+.button {
+  -fx-background-color: #ffffff;
+  -fx-border-color: #dce6ed;
+  -fx-border-radius: 8;
+  -fx-background-radius: 8;
+  -fx-padding: 8 14;
+  -fx-cursor: hand;
+  -fx-font-weight: 600;
+}
+.button:hover { -fx-background-color: #f1faf8; -fx-border-color: #8ccfc0; }
+.button:default, .primary-button {
+  -fx-background-color: linear-gradient(to right, #087f6d, #16a085);
+  -fx-text-fill: white;
+  -fx-border-color: transparent;
+}
+.button:default:hover, .primary-button:hover { -fx-background-color: #076b5c; }
+.text-field, .password-field, .text-area, .combo-box, .date-picker, .spinner {
+  -fx-background-radius: 8;
+  -fx-border-radius: 8;
+  -fx-border-color: #d6e2e9;
+  -fx-background-color: #ffffff;
+}
+.table-view, .list-view {
+  -fx-background-color: white;
+  -fx-background-radius: 12;
+  -fx-border-color: #e0e9ee;
+  -fx-border-radius: 12;
+  -fx-padding: 3;
+}
+.table-view .column-header-background { -fx-background-color: #edf7f5; -fx-background-radius: 10 10 0 0; }
+.table-view .column-header, .table-view .filler { -fx-background-color: transparent; -fx-size: 38; }
+.table-view .table-cell { -fx-padding: 10 8; }
+.table-row-cell:filled:selected { -fx-background-color: #d9f0eb; }
+.scroll-pane, .scroll-pane > .viewport { -fx-background-color: transparent; }
+.dialog-pane { -fx-background-color: #f8fbfc; }
+.dialog-pane .content { -fx-padding: 8; }

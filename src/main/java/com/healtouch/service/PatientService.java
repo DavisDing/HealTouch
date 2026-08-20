@@ -5,6 +5,7 @@ import com.healtouch.dao.Jdbc;
 import com.healtouch.dao.PatientDao;
 import com.healtouch.model.PageResult;
 import com.healtouch.model.Patient;
+import com.healtouch.model.PatientType;
 import com.healtouch.model.Permission;
 import com.healtouch.model.UserSession;
 import com.healtouch.util.Checks;
@@ -161,12 +162,15 @@ public class PatientService {
 
   private void validate(Patient p) {
     if (p == null) throw new IllegalArgumentException("患者信息不能为空");
+    if (p.birthDate == null) throw new IllegalArgumentException("出生日期不能为空");
+    if (p.birthDate.isAfter(java.time.LocalDate.now())) throw new IllegalArgumentException("出生日期不能晚于今天");
+    // Patient type is a derived field: an adult is someone who has reached 18.
+    p.patientType = PatientType.fromBirthDate(p.birthDate);
     Checks.required(p.name, "姓名");
     Checks.required(p.idType, "证件类型");
     Checks.required(p.idNumber, "证件号码");
     Checks.required(p.phone, "联系电话");
-    if (p.patientType == null || p.gender == null || p.birthDate == null)
-      throw new IllegalArgumentException("患者类型、性别和出生日期不能为空");
+    if (p.gender == null) throw new IllegalArgumentException("性别不能为空");
     if (p.isChild()) {
       Checks.required(p.guardianName, "监护人姓名");
       Checks.required(p.guardianRelationship, "监护人关系");

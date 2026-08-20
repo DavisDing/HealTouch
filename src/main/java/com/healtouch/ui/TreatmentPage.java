@@ -84,7 +84,7 @@ public class TreatmentPage {
                     therapist.getValue().id,
                     note.getText(),
                     new ArrayList<TreatmentLine>(lines));
-            showCharge(id, sum());
+            showCharge(id, sum(), patient.getValue());
             lines.clear();
             updateTotal();
             Ui.info("账单草稿已创建，请完成收费。");
@@ -126,48 +126,60 @@ public class TreatmentPage {
     total.setText(Money.format(sum()));
   }
 
-  private void showCharge(long billId, long receivable) {
+  private void showCharge(long billId, long receivable, Patient patient) {
     Dialog<ButtonType> dialog = new Dialog<ButtonType>();
     dialog.setTitle("账单收费");
-    dialog.setHeaderText("应收总额：" + Money.format(receivable) + "（必须一次收齐）");
+    long balance = services.deposits.balance(session, patient.id);
+    dialog.setHeaderText(
+        "应收：" + Money.format(receivable) + "  ·  当前预存：" + Money.format(balance));
+    Label tip = new Label("默认使用预存扣款；预存不足时可移除或调整支付行后补充其他支付方式。");
+    tip.setWrapText(true);
+    tip.setStyle("-fx-text-fill: #56737e;");
     ObservableList<PaymentLine> payments = FXCollections.observableArrayList();
-    payments.add(new PaymentLine(PaymentMethod.CASH, receivable));
-    TableView<PaymentLine> pt = new TableView<PaymentLine>();
+    payments.add(new PaymentLine(PaymentMethod.DEPOSIT, receivable));
+    TableView<PaymentLine> paymentTable = new TableView<PaymentLine>();
     TableColumn<PaymentLine, String> method = colPay("支付方式", p -> p.method.getLabel());
     TableColumn<PaymentLine, String> amount = colPay("金额", p -> Money.format(p.amountCents));
-    pt.getColumns().addAll(method, amount);
-    pt.setItems(payments);
-    pt.setPrefHeight(160);
-    ComboBox<PaymentMethod> pm =
+    paymentTable.getColumns().addAll(method, amount);
+    paymentTable.setItems(payments);
+    paymentTable.setPrefHeight(160);
+    ComboBox<PaymentMethod> paymentMethod =
         new ComboBox<PaymentMethod>(FXCollections.observableArrayList(PaymentMethod.values()));
-    pm.setValue(PaymentMethod.CASH);
+    paymentMethod.setValue(PaymentMethod.DEPOSIT);
     TextField value = new TextField(String.format("%.2f", receivable / 100.0));
+    value.setPromptText("金额");
     Button add = new Button("添加支付行");
     add.setOnAction(
         e -> {
           try {
-            payments.add(new PaymentLine(pm.getValue(), Money.parse(value.getText())));
+            payments.add(new PaymentLine(paymentMethod.getValue(), Money.parse(value.getText())));
             value.clear();
-          } catch (Exception x) {
-            Ui.error(x);
-          }
+          } catch (Exception exception) { Ui.error(exception); }
         });
-    Button del = new Button("移除");
-    del.setOnAction(e -> payments.remove(pt.getSelectionModel().getSelectedItem()));
-    dialog.getDialogPane().setContent(new VBox(10, new HBox(8, pm, value, add, del), pt));
+    Button replace = new Button("替换选中行");
+    replace.setOnAction(
+        e -> {
+          try {
+            int selected = paymentTable.getSelectionModel().getSelectedIndex();
+            if (selected < 0) throw new IllegalArgumentException("请选择要替换的支付行");
+            payments.set(selected, new PaymentLine(paymentMethod.getValue(), Money.parse(value.getText())));
+          } catch (Exception exception) { Ui.error(exception); }
+        });
+    Button delete = new Button("移除选中行");
+    delete.setOnAction(e -> payments.remove(paymentTable.getSelectionModel().getSelectedItem()));
+    dialog.getDialogPane().setContent(new VBox(10, tip, new HBox(8, paymentMethod, value, add, replace, delete), paymentTable));
     dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-    dialog.setResultConverter(
-        button -> {
-          if (button == ButtonType.OK) {
-            try {
-              services.billing.checkout(session, billId, new ArrayList<PaymentLine>(payments));
-              Ui.info("收费成功，治疗记录已完成。");
-            } catch (Exception e) {
-              Ui.error(e);
-              return null;
-            }
+    Button ok = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+    ok.addEventFilter(
+        javafx.event.ActionEvent.ACTION,
+        event -> {
+          try {
+            services.billing.checkout(session, billId, new ArrayList<PaymentLine>(payments));
+            Ui.info("收费成功，预存扣款已同步入账，治疗记录已完成。");
+          } catch (Exception exception) {
+            event.consume();
+            Ui.error(exception);
           }
-          return button;
         });
     dialog.showAndWait();
   }

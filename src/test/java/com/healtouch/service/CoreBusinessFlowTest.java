@@ -89,6 +89,9 @@ public class CoreBusinessFlowTest {
     assertEquals(BillStatus.PAID, bill.status);
     assertEquals(10000, bill.paidCents);
     assertEquals(0, bill.refundedCents);
+    assertEquals(patientId, bill.patientId);
+    assertEquals(TransactionType.CONSUMPTION, deposits.history(admin, patientId).get(0).type);
+    assertEquals(-4000, deposits.history(admin, patientId).get(0).amountCents);
   }
 
   @Test
@@ -124,6 +127,34 @@ public class CoreBusinessFlowTest {
     assertEquals(1, third.getItems().size());
     assertTrue(third.hasPreviousPage());
     assertFalse(third.hasNextPage());
+  }
+
+  @Test
+  public void patientTypeIsDerivedFromBirthDateUsingEighteenthBirthday() {
+    Patient adult = new Patient();
+    adult.patientType = PatientType.CHILD; // The supplied type must not override the date-derived value.
+    adult.name = "刚满十八岁";
+    adult.gender = Gender.FEMALE;
+    adult.idType = "身份证";
+    adult.idNumber = "AGE-18";
+    adult.birthDate = LocalDate.now().minusYears(18);
+    adult.phone = "13700000000";
+    long adultId = patients.create(admin, adult);
+    assertEquals(PatientType.ADULT, patients.get(admin, adultId).patientType);
+
+    Patient minor = new Patient();
+    minor.patientType = PatientType.ADULT;
+    minor.name = "尚未成年";
+    minor.gender = Gender.MALE;
+    minor.idType = "病历卡";
+    minor.idNumber = "AGE-17";
+    minor.birthDate = LocalDate.now().minusYears(18).plusDays(1);
+    minor.phone = "13700000001";
+    minor.guardianName = "家长";
+    minor.guardianRelationship = "父亲";
+    minor.guardianPhone = "13700000002";
+    long minorId = patients.create(admin, minor);
+    assertEquals(PatientType.CHILD, patients.get(admin, minorId).patientType);
   }
 
   @Test

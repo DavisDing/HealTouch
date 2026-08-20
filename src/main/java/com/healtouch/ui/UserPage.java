@@ -43,7 +43,7 @@ public class UserPage {
         .addAll(
             col("姓名", x -> x.name),
             col("账号", x -> x.loginName),
-            col("角色", x -> x.roles.toString()),
+            col("角色", x -> roleLabels(x.roles)),
             col("状态", x -> x.active ? "在职" : "停用"));
     table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
     VBox.setVgrow(table, Priority.ALWAYS);
@@ -67,9 +67,19 @@ public class UserPage {
     }
   }
 
+  private String roleLabels(java.util.Set<RoleCode> roles) {
+    StringBuilder labels = new StringBuilder();
+    for (RoleCode role : roles) {
+      if (labels.length() > 0) labels.append("、");
+      labels.append(role.getLabel());
+    }
+    return labels.toString();
+  }
+
   private void add() {
-    Dialog<ButtonType> d = new Dialog<ButtonType>();
-    d.setTitle("新增用户");
+    Dialog<ButtonType> dialog = new Dialog<ButtonType>();
+    dialog.setTitle("新增用户");
+    dialog.setHeaderText("请完成所有必填内容后再保存。");
     TextField name = new TextField();
     TextField account = new TextField();
     TextField phone = new TextField();
@@ -78,44 +88,38 @@ public class UserPage {
     ListView<RoleCode> roles =
         new ListView<RoleCode>(FXCollections.observableArrayList(RoleCode.values()));
     roles.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-    roles.setPrefHeight(120);
-    d.getDialogPane()
-        .setContent(
-            new VBox(
-                8,
-                new Label("姓名"),
-                name,
-                new Label("登录账号"),
-                account,
-                new Label("手机号"),
-                phone,
-                new Label("初始密码"),
-                password,
-                new Label("角色（可多选）"),
-                roles));
-    d.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-    d.setResultConverter(
-        b -> {
-          if (b == ButtonType.OK) {
-            try {
-              EnumSet<RoleCode> set = EnumSet.noneOf(RoleCode.class);
-              set.addAll(roles.getSelectionModel().getSelectedItems());
-              services.users.create(
-                  session,
-                  name.getText(),
-                  account.getText(),
-                  phone.getText(),
-                  password.getText(),
-                  set);
-              load();
-              Ui.info("用户已创建，首次登录需修改密码。");
-            } catch (Exception e) {
-              Ui.error(e);
-              return null;
-            }
+    roles.setPrefHeight(135);
+    VBox form = new VBox(
+        8,
+        new Label("姓名*"), name,
+        new Label("登录账号*"), account,
+        new Label("手机号*"), phone,
+        new Label("初始密码*"), password,
+        new Label("角色（可多选）*"), roles);
+    dialog.getDialogPane().setContent(form);
+    dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+    Button ok = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+    ok.addEventFilter(
+        javafx.event.ActionEvent.ACTION,
+        event -> {
+          try {
+            EnumSet<RoleCode> set = EnumSet.noneOf(RoleCode.class);
+            set.addAll(roles.getSelectionModel().getSelectedItems());
+            services.users.create(
+                session,
+                name.getText(),
+                account.getText(),
+                phone.getText(),
+                password.getText(),
+                set);
+            load();
+            Ui.info("用户已创建，首次登录需修改密码。");
+          } catch (Exception exception) {
+            event.consume();
+            Ui.error(exception);
           }
-          return b;
         });
-    d.showAndWait();
+    dialog.showAndWait();
   }
+
 }

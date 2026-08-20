@@ -5,6 +5,8 @@ import com.healtouch.dao.Jdbc;
 import com.healtouch.model.*;
 import com.healtouch.util.Codes;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 import javax.sql.DataSource;
 
 public class DepositService {
@@ -21,6 +23,36 @@ public class DepositService {
       return balance(c, patientId);
     } catch (SQLException e) {
       throw new IllegalStateException("查询预存余额失败", e);
+    }
+  }
+
+  public List<TransactionSummary> history(UserSession actor, long patientId) {
+    Authorization.require(actor, Permission.PATIENT_VIEW);
+    List<TransactionSummary> rows = new ArrayList<TransactionSummary>();
+    String sql =
+        "SELECT dt.*, b.bill_code FROM deposit_transaction dt "
+            + "LEFT JOIN bill b ON b.id=dt.bill_id WHERE dt.patient_id=? "
+            + "ORDER BY dt.created_at DESC, dt.id DESC LIMIT 200";
+    try (Connection c = dataSource.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+      ps.setLong(1, patientId);
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          TransactionSummary row = new TransactionSummary();
+          row.transactionCode = rs.getString("transaction_code");
+          row.type = TransactionType.valueOf(rs.getString("transaction_type"));
+          row.amountCents = rs.getLong("amount_cents");
+          row.balanceAfterCents = rs.getLong("balance_after_cents");
+          String method = rs.getString("payment_method");
+          row.paymentMethod = method == null ? null : PaymentMethod.valueOf(method);
+          row.billCode = rs.getString("bill_code");
+          row.remark = rs.getString("remark");
+          row.createdAt = rs.getString("created_at");
+          rows.add(row);
+        }
+      }
+      return rows;
+    } catch (SQLException e) {
+      throw new IllegalStateException("查询预存记录失败", e);
     }
   }
 
@@ -104,6 +136,17 @@ public class DepositService {
               String.valueOf(amountCents));
           return null;
         });
+  }
+
+  public static class TransactionSummary {
+    public String transactionCode;
+    public TransactionType type;
+    public long amountCents;
+    public long balanceAfterCents;
+    public PaymentMethod paymentMethod;
+    public String billCode;
+    public String remark;
+    public String createdAt;
   }
 
   private void ensureAccount(Connection c, long patientId) throws SQLException {
