@@ -641,7 +641,7 @@ SQLite 本地数据库
 - 工作流文件统一放在 `.github/workflows/` 目录。
 - Pull Request 时执行 Java 编译、依赖检查、数据库迁移检查和自动化测试；每次推送到主分支都会在上述检查通过后，自动生成 x86/x64 Windows 安装包并保存为 Actions Artifact。
 - 创建版本标签（格式如 `v1.0.0`）时，执行同一套正式构建，生成 x86 与 x64 两个 Windows 安装包，并自动创建 GitHub Release。
-- Windows 构建任务使用 `windows-latest` runner；Java 8 由工作流明确选择 BellSoft Liberica 的 `jdk+fx` 包。Launch4j 使用 Chocolatey 当前可用的固定版本 `3.14`；Inno Setup 优先使用 Runner 预装版本（当前为 6.7.1），若未来 Runner 移除该命令才通过 Chocolatey 安装备选版本。由于 Chocolatey 的 Launch4j 安装包不创建 `launch4jc` 的命令行 shim，工作流会显式定位 `launch4jc.exe` 并将路径传给后续打包脚本；同时确认 `iscc` 可用，避免因 Runner 镜像或 PATH 变化在真正打包时才失败。
+- Windows 构建任务使用 `windows-latest` runner；Java 8 由工作流明确选择 BellSoft Liberica 的 `jdk+fx` 包。Launch4j 使用 Chocolatey 当前可用的固定版本 `3.14`；Inno Setup 优先使用 Runner 预装版本（当前为 6.7.1），若未来 Runner 移除该命令才通过 Chocolatey 安装备选版本。由于 Chocolatey 的 Launch4j 安装包不创建命令行 shim，且原生 `launch4jc.exe` 依赖传统 Windows JRE 发现方式，工作流会显式定位 `launch4j.jar`，再由已配置的 Java 8 直接运行它；同时确认 `iscc` 可用，避免因 Runner 镜像、PATH 或 JRE 注册表状态变化在真正打包时才失败。
 - CI 使用 BellSoft Liberica JDK 8 的 `jdk+fx` 包，其中包含 JavaFX 8，因此 Maven 可直接编译 `javafx.*` 源码。打包任务会分别准备 x64 与 x86 的 `jdk+fx`，验证各自的 JavaFX 运行时和 32/64 位位数后，将 JDK 内置的 `jre/` 复制到对应安装包；不再依赖手工配置 Runtime 下载地址或 SHA-256 Secrets。JavaFX 不作为 Maven 依赖或 Shade 内容加入应用 JAR。
 - 打包前执行清理构建，禁止将本地数据库、用户数据、日志和备份文件打入安装包。
 - CI 在编译前执行 JDK 8 / JavaFX 可用性检查，并使用固定版本的 `maven-dependency-plugin` 预解析所有 Maven 依赖与构建插件；这会将“依赖无法解析”和“JDK 不含 JavaFX”的问题提前标记为明确失败步骤。
