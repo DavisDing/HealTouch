@@ -19,7 +19,15 @@ Copy-Item "$PSScriptRoot\launch4j.xml" $launch4jConfig -Force
 (Get-Content $launch4jConfig) -replace 'healtouch-1.0.0-SNAPSHOT-shaded.jar', $jar.Name |
   Set-Content $launch4jConfig -Encoding UTF8
 
-& launch4jc $launch4jConfig
+$launch4jcPath = $env:HEALTOUCH_LAUNCH4JC
+if ([string]::IsNullOrWhiteSpace($launch4jcPath)) {
+  $launch4jc = Get-Command launch4jc -ErrorAction SilentlyContinue
+  if ($null -ne $launch4jc) { $launch4jcPath = $launch4jc.Source }
+}
+if ([string]::IsNullOrWhiteSpace($launch4jcPath) -or -not (Test-Path -LiteralPath $launch4jcPath -PathType Leaf)) {
+  throw 'Launch4j executable was not found. Set HEALTOUCH_LAUNCH4JC or add launch4jc.exe to PATH.'
+}
+& $launch4jcPath $launch4jConfig
 if ($LASTEXITCODE -ne 0) { throw 'Launch4j packaging failed.' }
 & iscc "/DAppVersion=$Version" "/DArch=$Architecture" "/DRuntimeDir=$RuntimeDirectory" "$PSScriptRoot\HealTouch.iss"
 if ($LASTEXITCODE -ne 0) { throw 'Inno Setup packaging failed.' }
