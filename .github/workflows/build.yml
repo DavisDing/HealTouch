@@ -191,9 +191,17 @@ jobs:
             $process = New-Object System.Diagnostics.Process
             $process.StartInfo = $startInfo
             [void]$process.Start()
-            $standardOutput = $process.StandardOutput.ReadToEnd()
-            $standardError = $process.StandardError.ReadToEnd()
-            $process.WaitForExit()
+            # Drain stdout and stderr concurrently. Reading stdout to completion before stderr
+            # can deadlock when Java fills its stderr pipe with -XshowSettings output.
+            $standardOutputTask = $process.StandardOutput.ReadToEndAsync()
+            $standardErrorTask = $process.StandardError.ReadToEndAsync()
+            if (-not $process.WaitForExit(60000)) {
+              $process.Kill()
+              $process.WaitForExit()
+              throw "Timed out after 60 seconds while starting the $($runtime.Architecture) bundled runtime."
+            }
+            $standardOutput = $standardOutputTask.GetAwaiter().GetResult()
+            $standardError = $standardErrorTask.GetAwaiter().GetResult()
             $properties = $standardOutput + [Environment]::NewLine + $standardError
             if ($process.ExitCode -ne 0) {
               throw "Unable to start the $($runtime.Architecture) bundled runtime: $properties"
