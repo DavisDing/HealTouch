@@ -9,14 +9,8 @@ import com.healtouch.util.Money;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.scene.Parent;
-import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Dialog;
-import javafx.scene.control.Label;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TextField;
-import javafx.scene.control.TextInputDialog;
+import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
@@ -33,30 +27,94 @@ public class BillPage {
   }
 
   public Parent node() {
-    keyword.setPromptText("患者、证件号码或账单号");
-    keyword.setPrefWidth(230);
-    status.setPromptText("全部状态");
-    Button search = new Button("查询");
-    search.setOnAction(e -> load());
+    keyword.setPromptText("搜索患者姓名、证件号码或账单编号...");
+    keyword.setPrefWidth(260);
     keyword.setOnAction(e -> load());
-    Button prepaidHistory = new Button("查看患者预存记录");
+
+    status.setPromptText("全部状态");
+    status.setOnAction(e -> load());
+
+    Button search = Ui.primaryButton("查询");
+    search.setOnAction(e -> load());
+
+    Button refresh = new Button("刷新重载");
+    refresh.setOnAction(e -> load());
+
+    Button prepaidHistory = new Button("预存变动记录");
     prepaidHistory.setOnAction(e -> showPrepaidHistory());
-    Button voidBill = new Button("作废待收费账单");
+
+    Button voidBill = Ui.dangerButton("作废超期/待收费单");
     voidBill.setOnAction(e -> voidBill());
-    Button refund = new Button("申请退款");
+
+    Button refund = new Button("申请冲正退款");
     refund.setOnAction(e -> refund());
+
+    HBox tb = Ui.toolbar(keyword, status, search, refresh, Ui.spacer(), prepaidHistory, voidBill, refund);
+
+    TableColumn<BillSummary, String> billCodeCol = column("账单单据号", x -> x.billCode);
+    billCodeCol.setPrefWidth(140);
+    billCodeCol.setStyle("-fx-font-weight: bold;");
+
+    TableColumn<BillSummary, String> patientCol = column("患者姓名", x -> x.patientName);
+    patientCol.setPrefWidth(110);
+
+    TableColumn<BillSummary, String> dateCol = column("就诊日期", x -> String.valueOf(x.treatmentDate));
+    dateCol.setPrefWidth(110);
+
+    TableColumn<BillSummary, String> therapistCol = column("责任主治医师", x -> x.therapistName);
+    therapistCol.setPrefWidth(130);
+
+    TableColumn<BillSummary, String> statusCol = column("单据结算状态", x -> statusLabel(x.status));
+    statusCol.setPrefWidth(110);
+    statusCol.setCellFactory(c -> new TableCell<BillSummary, String>() {
+      @Override
+      protected void updateItem(String item, boolean empty) {
+        super.updateItem(item, empty);
+        if (empty || item == null) {
+          setGraphic(null);
+          setText(null);
+        } else if ("已支付".equals(item)) {
+          setGraphic(Ui.paidBadge());
+          setText(null);
+        } else if ("待收费".equals(item)) {
+          setGraphic(Ui.pendingBadge());
+          setText(null);
+        } else {
+          setText(item);
+          setStyle("-fx-font-size: 11px; -fx-text-fill: #668292;");
+        }
+      }
+    });
+
+    TableColumn<BillSummary, String> receivableCol = column("应收总额", x -> Money.format(x.receivableCents));
+    receivableCol.setPrefWidth(110);
+
+    TableColumn<BillSummary, String> paidCol = column("实收金额 (全额)", x -> Money.format(x.paidCents));
+    paidCol.setPrefWidth(130);
+    paidCol.setStyle("-fx-font-weight: bold; -fx-text-fill: #087F6D;");
+
+    TableColumn<BillSummary, String> refundedCol = column("累计已退款", x -> Money.format(x.refundedCents));
+    refundedCol.setPrefWidth(110);
+    refundedCol.setStyle("-fx-text-fill: #DC2626;");
+
     table.getColumns().addAll(
-        column("账单号", x -> x.billCode),
-        column("患者", x -> x.patientName),
-        column("日期", x -> String.valueOf(x.treatmentDate)),
-        column("治疗师", x -> x.therapistName),
-        column("状态", x -> statusLabel(x.status)),
-        column("应收", x -> Money.format(x.receivableCents)),
-        column("已收", x -> Money.format(x.paidCents)),
-        column("已退款", x -> Money.format(x.refundedCents)));
+        billCodeCol,
+        patientCol,
+        dateCol,
+        therapistCol,
+        statusCol,
+        receivableCol,
+        paidCol,
+        refundedCol);
+
     table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
     VBox.setVgrow(table, Priority.ALWAYS);
-    VBox page = Ui.page("账单管理", Ui.toolbar(keyword, status, search, prepaidHistory, voidBill, refund), table);
+
+    VBox page = Ui.page(
+        "账单与收银管理",
+        "全额收齐原则 · 待收费单据 30 分钟未结算自动作废 · 严禁欠费挂账",
+        tb,
+        table);
     load();
     return page;
   }
@@ -64,9 +122,9 @@ public class BillPage {
   private void voidBill() {
     BillSummary bill = table.getSelectionModel().getSelectedItem();
     try {
-      if (bill == null) throw new IllegalArgumentException("请选择账单");
-      if (Ui.confirm("确认作废账单 " + bill.billCode + "？")) {
-        services.billing.voidPending(session, bill.id, "前台主动取消");
+      if (bill == null) throw new IllegalArgumentException("请选择需要作废的账单");
+      if (Ui.confirm("确认作废待收费账单 " + bill.billCode + " 吗？作废后不可恢复。")) {
+        services.billing.voidPending(session, bill.id, "前台操作员主动取消");
         load();
       }
     } catch (Exception exception) { Ui.error(exception); }
@@ -81,23 +139,23 @@ public class BillPage {
 
   private void showPrepaidHistory() {
     BillSummary bill = table.getSelectionModel().getSelectedItem();
-    if (bill == null) { Ui.error(new IllegalArgumentException("请选择账单后查看该患者的预存记录")); return; }
+    if (bill == null) { Ui.error(new IllegalArgumentException("请在列表中选择账单后查看该患者的预存记录")); return; }
     try {
       long balance = services.deposits.balance(session, bill.patientId);
       TableView<DepositService.TransactionSummary> history = new TableView<DepositService.TransactionSummary>();
       history.getColumns().addAll(
-          historyColumn("时间", row -> row.createdAt),
-          historyColumn("类型", row -> row.type == null ? "—" : row.type.getLabel()),
-          historyColumn("金额", row -> Money.format(row.amountCents)),
-          historyColumn("余额", row -> Money.format(row.balanceAfterCents)),
-          historyColumn("关联账单", row -> row.billCode == null ? "—" : row.billCode),
-          historyColumn("备注", row -> row.remark == null ? "—" : row.remark));
+          historyColumn("记账流水时间", row -> row.createdAt),
+          historyColumn("业务类型", row -> row.type == null ? "—" : row.type.getLabel()),
+          historyColumn("变动金额", row -> Money.format(row.amountCents)),
+          historyColumn("划扣后余额", row -> Money.format(row.balanceAfterCents)),
+          historyColumn("关联账单单号", row -> row.billCode == null ? "—" : row.billCode),
+          historyColumn("审计备注", row -> row.remark == null ? "—" : row.remark));
       history.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
       history.setPrefHeight(340);
       history.setItems(FXCollections.observableArrayList(services.deposits.history(session, bill.patientId)));
       Dialog<Void> dialog = new Dialog<Void>();
-      dialog.setTitle("患者预存记录");
-      dialog.setHeaderText(bill.patientName + " · 当前预存余额：" + Money.format(balance));
+      dialog.setTitle("患者预存资金双写审计流水");
+      dialog.setHeaderText("患者：" + bill.patientName + "  ·  当前可用预存结存：" + Money.format(balance));
       dialog.getDialogPane().setContent(history);
       dialog.getDialogPane().getButtonTypes().add(javafx.scene.control.ButtonType.CLOSE);
       dialog.showAndWait();
@@ -106,15 +164,15 @@ public class BillPage {
 
   private void refund() {
     BillSummary bill = table.getSelectionModel().getSelectedItem();
-    if (bill == null) { Ui.error(new IllegalArgumentException("请选择账单")); return; }
+    if (bill == null) { Ui.error(new IllegalArgumentException("请选择需要申请退款的账单")); return; }
     TextInputDialog dialog = new TextInputDialog();
-    dialog.setTitle("申请账单退款");
-    dialog.setHeaderText(bill.billCode + "，可退款：" + Money.format(bill.paidCents - bill.refundedCents));
-    dialog.setContentText("退款金额：");
+    dialog.setTitle("发起账单退款申请");
+    dialog.setHeaderText("账单号：" + bill.billCode + "，当前最大可退款额：" + Money.format(bill.paidCents - bill.refundedCents));
+    dialog.setContentText("请输入本次申请退款金额 (元)：");
     dialog.showAndWait().ifPresent(value -> {
       try {
-        long id = services.refunds.request(session, bill.id, Money.parse(value), "界面申请退款", null);
-        Ui.info("退款申请已提交，编号：" + id);
+        long id = services.refunds.request(session, bill.id, Money.parse(value), "前台发起退款冲正申请", null);
+        Ui.info("退款申请已成功提交至系统管理员审批，审批流水号：" + id);
         load();
       } catch (Exception exception) { Ui.error(exception); }
     });

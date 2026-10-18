@@ -1,0 +1,221 @@
+<svg width="1440" height="900" viewBox="0 0 1440 900" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .font-sans { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif; }
+      .shadow-sm { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.04)); }
+      .shadow-md { filter: drop-shadow(0 4px 12px rgba(16,40,32,0.06)); }
+      .shadow-lg { filter: drop-shadow(0 10px 25px rgba(16,40,32,0.08)); }
+    </style>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#087F6D" />
+      <stop offset="100%" stop-color="#149A84" />
+    </linearGradient>
+    <linearGradient id="primaryCardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#F2F9F7" />
+    </linearGradient>
+    <linearGradient id="warmCardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#FFFBF5" />
+    </linearGradient>
+    <linearGradient id="blueCardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#F4F8FC" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="1440" height="900" fill="#F4F7F9" />
+
+  <!-- macOS/Windows Window Frame & Header -->
+  <rect x="0" y="0" width="1440" height="64" fill="#FFFFFF" class="shadow-sm"/>
+  <line x1="0" y1="64" x2="1440" y2="64" stroke="#E5EDF0" stroke-width="1"/>
+
+  <!-- Window controls -->
+  <circle cx="24" cy="32" r="6" fill="#FF5F56"/>
+  <circle cx="44" cy="32" r="6" fill="#FFBD2E"/>
+  <circle cx="64" cy="32" r="6" fill="#27C93F"/>
+
+  <!-- Brand Logo & Clinic Info -->
+  <g transform="translate(100, 14)">
+    <rect x="0" y="0" width="36" height="36" rx="9" fill="url(#primaryGrad)"/>
+    <path d="M18 10 V26 M10 18 H26" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round"/>
+    <text x="46" y="22" class="font-sans" font-size="18" font-weight="700" fill="#13334A">HealTouch</text>
+    <text x="142" y="22" class="font-sans" font-size="12" font-weight="500" fill="#087F6D" letter-spacing="1">门诊专业版 V2.4</text>
+    <text x="46" y="34" class="font-sans" font-size="11" fill="#7892A0">和康堂中医推拿门诊</text>
+  </g>
+
+  <!-- Top Right Operator Info -->
+  <g transform="translate(1120, 16)">
+    <rect x="0" y="0" width="200" height="32" rx="16" fill="#F0F5F8"/>
+    <circle cx="16" cy="16" r="11" fill="#087F6D"/>
+    <text x="16" y="20" class="font-sans" font-size="11" font-weight="600" fill="#FFFFFF" text-anchor="middle">李</text>
+    <text x="36" y="20" class="font-sans" font-size="12" font-weight="600" fill="#244255">李医生 (主任治疗师)</text>
+    <rect x="215" y="0" width="80" height="32" rx="6" fill="#FFFFFF" stroke="#D3E0E8" stroke-width="1"/>
+    <text x="255" y="20" class="font-sans" font-size="12" font-weight="600" fill="#668292" text-anchor="middle">退出登录</text>
+  </g>
+
+  <!-- Left Sidebar Navigation -->
+  <rect x="0" y="64" width="220" height="836" fill="#FFFFFF"/>
+  <line x1="220" y1="64" x2="220" y2="900" stroke="#E5EDF0" stroke-width="1"/>
+
+  <text x="24" y="96" class="font-sans" font-size="11" font-weight="700" fill="#8DA4B0" letter-spacing="0.5">核心门诊业务</text>
+
+  <g transform="translate(12, 110)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="transparent"/>
+    <circle cx="20" cy="20" r="10" fill="#F2F6F8"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#829BA8" text-anchor="middle">01</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="500" fill="#415E70">首页工作台</text>
+  </g>
+  
+
+  <g transform="translate(12, 156)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="transparent"/>
+    <circle cx="20" cy="20" r="10" fill="#F2F6F8"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#829BA8" text-anchor="middle">02</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="500" fill="#415E70">患者档案</text>
+  </g>
+  
+
+  <g transform="translate(12, 202)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="transparent"/>
+    <circle cx="20" cy="20" r="10" fill="#F2F6F8"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#829BA8" text-anchor="middle">03</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="500" fill="#415E70">治疗登记</text>
+  </g>
+  
+
+  <g transform="translate(12, 248)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="transparent"/>
+    <circle cx="20" cy="20" r="10" fill="#F2F6F8"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#829BA8" text-anchor="middle">04</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="500" fill="#415E70">账单与收费</text>
+  </g>
+  
+
+  <g transform="translate(12, 294)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="transparent"/>
+    <circle cx="20" cy="20" r="10" fill="#F2F6F8"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#829BA8" text-anchor="middle">05</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="500" fill="#415E70">退款审批</text>
+  </g>
+  
+
+  <g transform="translate(12, 340)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="transparent"/>
+    <circle cx="20" cy="20" r="10" fill="#F2F6F8"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#829BA8" text-anchor="middle">06</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="500" fill="#415E70">预存管理</text>
+  </g>
+  
+
+  <g transform="translate(12, 386)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="transparent"/>
+    <circle cx="20" cy="20" r="10" fill="#F2F6F8"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#829BA8" text-anchor="middle">07</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="500" fill="#415E70">数据统计</text>
+  </g>
+  
+
+  <line x1="24" y1="442" x2="196" y2="442" stroke="#EDF2F5" stroke-width="1"/>
+  <text x="24" y="466" class="font-sans" font-size="11" font-weight="700" fill="#8DA4B0" letter-spacing="0.5">门诊运维设置</text>
+
+  <g transform="translate(12, 478)">
+    <rect x="0" y="0" width="196" height="38" rx="8" fill="transparent"/>
+    <text x="40" y="24" class="font-sans" font-size="13" font-weight="500" fill="#587383">用户管理</text>
+  </g>
+
+  <g transform="translate(12, 520)">
+    <rect x="0" y="0" width="196" height="38" rx="8" fill="#E8F6F3"/>
+    <text x="40" y="24" class="font-sans" font-size="13" font-weight="700" fill="#087F6D">治疗项目</text>
+  </g>
+
+  <g transform="translate(12, 562)">
+    <rect x="0" y="0" width="196" height="38" rx="8" fill="transparent"/>
+    <text x="40" y="24" class="font-sans" font-size="13" font-weight="500" fill="#587383">权限管理</text>
+  </g>
+
+  <g transform="translate(16, 840)">
+    <rect x="0" y="0" width="188" height="44" rx="8" fill="#F7FAFC" stroke="#E3EBEF" stroke-width="1"/>
+    <circle cx="16" cy="22" r="4" fill="#10B981"/>
+    <text x="28" y="20" class="font-sans" font-size="11" font-weight="600" fill="#2E4A5C">本地 SQLite 数据库在线</text>
+    <text x="28" y="34" class="font-sans" font-size="10" fill="#8CA1AE">就诊记录实时双写保障</text>
+  </g>
+
+  <!-- Main Catalog Management Area -->
+  <g transform="translate(252, 92)">
+    <text x="0" y="24" class="font-sans" font-size="24" font-weight="700" fill="#13334A">治疗项目与分类管理</text>
+    <text x="0" y="46" class="font-sans" font-size="13" fill="#668292">配置门诊推拿理疗项目、基准单价、建议时长、适应人群（成人/小儿）与启用状态</text>
+
+    <g transform="translate(850, 10)">
+      <rect x="0" y="0" width="120" height="40" rx="8" fill="#F0F8F6" stroke="#087F6D" stroke-width="1"/>
+      <text x="60" y="25" class="font-sans" font-size="12" font-weight="700" fill="#087F6D" text-anchor="middle">📁 分类管理</text>
+      <rect x="135" y="0" width="150" height="40" rx="8" fill="url(#primaryGrad)"/>
+      <text x="210" y="25" class="font-sans" font-size="13" font-weight="700" fill="#FFFFFF" text-anchor="middle">＋ 新增治疗项目</text>
+    </g>
+
+    <!-- Category Tabs Filter -->
+    <g transform="translate(0, 68)">
+      <rect x="0" y="0" width="1140" height="52" rx="10" fill="#FFFFFF" stroke="#E1EBF0" stroke-width="1" class="shadow-sm"/>
+      <g transform="translate(16, 10)">
+        <rect x="0" y="0" width="110" height="32" rx="6" fill="#087F6D"/>
+        <text x="55" y="21" class="font-sans" font-size="12" font-weight="700" fill="#FFFFFF" text-anchor="middle">全部项目 (12)</text>
+        <rect x="120" y="0" width="120" height="32" rx="6" fill="#F0F5F8"/>
+        <text x="180" y="21" class="font-sans" font-size="12" font-weight="600" fill="#3D5B6D" text-anchor="middle">小儿推拿类 (4)</text>
+        <rect x="250" y="0" width="120" height="32" rx="6" fill="#F0F5F8"/>
+        <text x="310" y="21" class="font-sans" font-size="12" font-weight="600" fill="#3D5B6D" text-anchor="middle">成人推拿类 (5)</text>
+        <rect x="380" y="0" width="120" height="32" rx="6" fill="#F0F5F8"/>
+        <text x="440" y="21" class="font-sans" font-size="12" font-weight="600" fill="#3D5B6D" text-anchor="middle">正骨整脊类 (2)</text>
+        <rect x="510" y="0" width="120" height="32" rx="6" fill="#F0F5F8"/>
+        <text x="570" y="21" class="font-sans" font-size="12" font-weight="600" fill="#3D5B6D" text-anchor="middle">理疗辅助类 (1)</text>
+      </g>
+    </g>
+
+    <!-- Catalog Table Area -->
+    <g transform="translate(0, 136)">
+      <rect x="0" y="0" width="1140" height="640" rx="12" fill="#FFFFFF" stroke="#E1EBF0" stroke-width="1" class="shadow-sm"/>
+      <rect x="16" y="16" width="1108" height="40" rx="6" fill="#EDF6F4"/>
+      <text x="32" y="41" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">项目编码</text>
+      <text x="140" y="41" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">项目名称</text>
+      <text x="310" y="41" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">所属分类</text>
+      <text x="440" y="41" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">适用人群</text>
+      <text x="560" y="41" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">标准单价</text>
+      <text x="680" y="41" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">参考时长</text>
+      <text x="800" y="41" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">当前状态</text>
+      <text x="960" y="41" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">操作</text>
+
+      <!-- Row 1 -->
+      <line x1="28" y1="64" x2="1112" y2="64" stroke="#EDF2F5" stroke-width="1"/>
+      <text x="32" y="94" class="font-sans" font-size="12" font-weight="700" fill="#087F6D">CAT-P01</text>
+      <text x="140" y="94" class="font-sans" font-size="13" font-weight="700" fill="#13334A">小儿积食调理推拿</text>
+      <text x="310" y="94" class="font-sans" font-size="12" fill="#2A5364">小儿推拿类</text>
+      <rect x="440" y="79" width="46" height="20" rx="4" fill="#FEF2E2"/>
+      <text x="448" y="93" class="font-sans" font-size="11" font-weight="600" fill="#C26A08">小儿</text>
+      <text x="560" y="94" class="font-sans" font-size="14" font-weight="800" fill="#0C3449">¥ 120.00</text>
+      <text x="680" y="94" class="font-sans" font-size="12" fill="#718E9E">30 分钟</text>
+      <rect x="800" y="79" width="48" height="20" rx="4" fill="#DCFCE7"/>
+      <text x="812" y="93" class="font-sans" font-size="11" font-weight="700" fill="#15803D">启用中</text>
+      <g transform="translate(960, 78)">
+        <text x="0" y="16" class="font-sans" font-size="12" font-weight="600" fill="#087F6D">编辑</text>
+        <text x="40" y="16" class="font-sans" font-size="12" font-weight="600" fill="#DC2626">停用</text>
+      </g>
+
+      <!-- Row 2 -->
+      <line x1="28" y1="116" x2="1112" y2="116" stroke="#EDF2F5" stroke-width="1"/>
+      <text x="32" y="146" class="font-sans" font-size="12" font-weight="700" fill="#087F6D">CAT-A02</text>
+      <text x="140" y="146" class="font-sans" font-size="13" font-weight="700" fill="#13334A">成人脊柱颈肩推拿</text>
+      <text x="310" y="146" class="font-sans" font-size="12" fill="#2A5364">成人推拿类</text>
+      <rect x="440" y="131" width="46" height="20" rx="4" fill="#E8F4FD"/>
+      <text x="448" y="145" class="font-sans" font-size="11" font-weight="600" fill="#1E40AF">成人</text>
+      <text x="560" y="146" class="font-sans" font-size="14" font-weight="800" fill="#0C3449">¥ 260.00</text>
+      <text x="680" y="146" class="font-sans" font-size="12" fill="#718E9E">45 分钟</text>
+      <rect x="800" y="131" width="48" height="20" rx="4" fill="#DCFCE7"/>
+      <text x="812" y="145" class="font-sans" font-size="11" font-weight="700" fill="#15803D">启用中</text>
+      <g transform="translate(960, 130)">
+        <text x="0" y="16" class="font-sans" font-size="12" font-weight="600" fill="#087F6D">编辑</text>
+        <text x="40" y="16" class="font-sans" font-size="12" font-weight="600" fill="#DC2626">停用</text>
+      </g>
+    </g>
+  </g>
+
+</svg>

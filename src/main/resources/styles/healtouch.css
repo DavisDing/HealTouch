@@ -1,42 +1,160 @@
 .root {
-  -fx-font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", Arial, sans-serif;
-  -fx-background-color: #f5f8fb;
-  -fx-text-fill: #18324a;
+  -fx-font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Segoe UI", Arial, sans-serif;
+  -fx-background-color: #f4f7f9;
+  -fx-text-fill: #13334a;
 }
-.label { -fx-text-fill: #18324a; }
+
+.label {
+  -fx-text-fill: #13334a;
+}
+
+/* 按钮通用样式 */
 .button {
   -fx-background-color: #ffffff;
-  -fx-border-color: #dce6ed;
+  -fx-border-color: #d3e2ea;
   -fx-border-radius: 8;
   -fx-background-radius: 8;
-  -fx-padding: 8 14;
+  -fx-padding: 8 16;
   -fx-cursor: hand;
   -fx-font-weight: 600;
+  -fx-text-fill: #2c485a;
+  -fx-font-size: 13px;
 }
-.button:hover { -fx-background-color: #f1faf8; -fx-border-color: #8ccfc0; }
+
+.button:hover {
+  -fx-background-color: #f0f7f6;
+  -fx-border-color: #8ccfc0;
+  -fx-text-fill: #087f6d;
+}
+
+.button:pressed {
+  -fx-background-color: #e2f2ef;
+}
+
 .button:default, .primary-button {
-  -fx-background-color: linear-gradient(to right, #087f6d, #16a085);
-  -fx-text-fill: white;
+  -fx-background-color: linear-gradient(to right, #087f6d, #149a84);
+  -fx-text-fill: #ffffff;
   -fx-border-color: transparent;
+  -fx-font-weight: bold;
 }
-.button:default:hover, .primary-button:hover { -fx-background-color: #076b5c; }
+
+.button:default:hover, .primary-button:hover {
+  -fx-background-color: #076b5c;
+}
+
+.button:default:pressed, .primary-button:pressed {
+  -fx-background-color: #055246;
+}
+
+.secondary-button {
+  -fx-background-color: #f0f7f6;
+  -fx-border-color: #bce3da;
+  -fx-text-fill: #087f6d;
+  -fx-font-weight: bold;
+}
+
+.secondary-button:hover {
+  -fx-background-color: #e0f2ee;
+  -fx-border-color: #087f6d;
+}
+
+.danger-button {
+  -fx-background-color: #fee2e2;
+  -fx-border-color: #fca5a5;
+  -fx-text-fill: #dc2626;
+  -fx-font-weight: bold;
+}
+
+.danger-button:hover {
+  -fx-background-color: #fecaca;
+  -fx-border-color: #dc2626;
+}
+
+/* 输入控件 */
 .text-field, .password-field, .text-area, .combo-box, .date-picker, .spinner {
   -fx-background-radius: 8;
   -fx-border-radius: 8;
-  -fx-border-color: #d6e2e9;
+  -fx-border-color: #d3e2ea;
+  -fx-background-color: #ffffff;
+  -fx-padding: 6 10;
+  -fx-font-size: 13px;
+}
+
+.text-field:focused, .password-field:focused, .text-area:focused, .combo-box:focused, .date-picker:focused {
+  -fx-border-color: #087f6d;
   -fx-background-color: #ffffff;
 }
-.table-view, .list-view {
-  -fx-background-color: white;
+
+/* 现代卡片与容器 */
+.card-section {
+  -fx-background-color: #ffffff;
   -fx-background-radius: 12;
-  -fx-border-color: #e0e9ee;
+  -fx-border-color: #e1ebf0;
   -fx-border-radius: 12;
-  -fx-padding: 3;
+  -fx-padding: 20;
 }
-.table-view .column-header-background { -fx-background-color: #edf7f5; -fx-background-radius: 10 10 0 0; }
-.table-view .column-header, .table-view .filler { -fx-background-color: transparent; -fx-size: 38; }
-.table-view .table-cell { -fx-padding: 10 8; }
-.table-row-cell:filled:selected { -fx-background-color: #d9f0eb; }
-.scroll-pane, .scroll-pane > .viewport { -fx-background-color: transparent; }
-.dialog-pane { -fx-background-color: #f8fbfc; }
-.dialog-pane .content { -fx-padding: 8; }
+
+.toolbar-container {
+  -fx-background-color: #ffffff;
+  -fx-background-radius: 12;
+  -fx-border-color: #e1ebf0;
+  -fx-border-radius: 12;
+  -fx-padding: 12 16;
+}
+
+/* 表格与列表 */
+.table-view, .list-view {
+  -fx-background-color: #ffffff;
+  -fx-background-radius: 12;
+  -fx-border-color: #e1ebf0;
+  -fx-border-radius: 12;
+  -fx-padding: 4;
+}
+
+.table-view .column-header-background {
+  -fx-background-color: #edf6f4;
+  -fx-background-radius: 10 10 0 0;
+}
+
+.table-view .column-header, .table-view .filler {
+  -fx-background-color: transparent;
+  -fx-size: 38;
+  -fx-font-weight: bold;
+  -fx-text-fill: #2a5364;
+}
+
+.table-view .column-header .label {
+  -fx-text-fill: #2a5364;
+  -fx-font-weight: bold;
+}
+
+.table-view .table-cell {
+  -fx-padding: 10 8;
+  -fx-text-fill: #13334a;
+  -fx-alignment: CENTER_LEFT;
+}
+
+.table-row-cell {
+  -fx-border-color: transparent transparent #f1f5f8 transparent;
+}
+
+.table-row-cell:filled:selected {
+  -fx-background-color: #e8f6f3;
+}
+
+.scroll-pane, .scroll-pane > .viewport {
+  -fx-background-color: transparent;
+}
+
+/* 对话框 */
+.dialog-pane {
+  -fx-background-color: #f4f7f9;
+}
+
+.dialog-pane .content {
+  -fx-padding: 16;
+}
+
+.dialog-pane .header-panel {
+  -fx-background-color: #ffffff;
+}

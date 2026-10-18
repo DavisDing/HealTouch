@@ -1,0 +1,231 @@
+# -*- coding: utf-8 -*-
+import subprocess
+from generate_all_views import svg_header, make_shell
+
+# 1. 首页工作台 (Dashboard)
+def build_dashboard():
+    shell = make_shell(active_nav="dashboard")
+    content = """
+  <!-- Main Work Area -->
+  <g transform="translate(252, 92)">
+    <!-- Header Title & Quick Date -->
+    <text x="0" y="24" class="font-sans" font-size="24" font-weight="700" fill="#13334A">首页工作台</text>
+    <text x="0" y="46" class="font-sans" font-size="13" fill="#668292">欢迎回来，李医生。今天是 2026年10月18日 星期日 · 门诊接诊进行中</text>
+    
+    <!-- Top 3 Key Metric Cards -->
+    <g transform="translate(0, 68)">
+      <!-- Card 1: 今日服务净收入 -->
+      <g transform="translate(0, 0)">
+        <rect x="0" y="0" width="370" height="126" rx="14" fill="url(#primaryCardGrad)" stroke="#CDE9E2" stroke-width="1.5" class="shadow-sm"/>
+        <circle cx="330" cy="40" r="22" fill="#E2F4F0"/>
+        <text x="330" y="46" class="font-sans" font-size="16" fill="#087F6D" font-weight="700" text-anchor="middle">¥</text>
+        <text x="24" y="34" class="font-sans" font-size="13" font-weight="600" fill="#587888">今日门诊净收入 (服务费)</text>
+        <text x="24" y="78" class="font-sans" font-size="34" font-weight="800" fill="#0C3449">¥ 4,860.00</text>
+        <rect x="24" y="94" width="70" height="20" rx="4" fill="#D1EFE8"/>
+        <text x="28" y="108" class="font-sans" font-size="11" font-weight="600" fill="#087F6D">较昨日 +18%</text>
+        <text x="102" y="108" class="font-sans" font-size="11" fill="#7892A0">已扣除退款 · 实收账单 16 笔</text>
+      </g>
+
+      <!-- Card 2: 今日就诊患者 -->
+      <g transform="translate(390, 0)">
+        <rect x="0" y="0" width="370" height="126" rx="14" fill="url(#warmCardGrad)" stroke="#F3E5D0" stroke-width="1.5" class="shadow-sm"/>
+        <circle cx="330" cy="40" r="22" fill="#FEF0DC"/>
+        <text x="330" y="46" class="font-sans" font-size="14" fill="#D97706" font-weight="700" text-anchor="middle">人</text>
+        <text x="24" y="34" class="font-sans" font-size="13" font-weight="600" fill="#6B7280">今日就诊及建档</text>
+        <g transform="translate(24, 78)">
+          <text x="0" y="0" class="font-sans" font-size="34" font-weight="800" fill="#0C3449">19 <tspan font-size="18" font-weight="500">人次</tspan></text>
+        </g>
+        <rect x="24" y="94" width="80" height="20" rx="4" fill="#FEE7C8"/>
+        <text x="28" y="108" class="font-sans" font-size="11" font-weight="600" fill="#B45309">新建档案 5 人</text>
+        <text x="112" y="108" class="font-sans" font-size="11" fill="#7892A0">成人 14 人 · 小儿患者 5 人</text>
+      </g>
+
+      <!-- Card 3: 预存账户变动 -->
+      <g transform="translate(780, 0)">
+        <rect x="0" y="0" width="370" height="126" rx="14" fill="url(#blueCardGrad)" stroke="#D7E6F3" stroke-width="1.5" class="shadow-sm"/>
+        <circle cx="330" cy="40" r="22" fill="#E3EFF9"/>
+        <text x="330" y="46" class="font-sans" font-size="14" fill="#2563EB" font-weight="700" text-anchor="middle">存</text>
+        <text x="24" y="34" class="font-sans" font-size="13" font-weight="600" fill="#5A748A">今日预存金变动</text>
+        <text x="24" y="78" class="font-sans" font-size="34" font-weight="800" fill="#0C3449">+ ¥ 6,000.00</text>
+        <text x="24" y="108" class="font-sans" font-size="11" fill="#6B889C">充值 3 笔 · 预存划扣消费 ¥ 1,820.00</text>
+      </g>
+    </g>
+
+    <!-- Quick Actions Banner -->
+    <g transform="translate(0, 214)">
+      <rect x="0" y="0" width="1150" height="88" rx="14" fill="#FFFFFF" stroke="#E1EBF0" stroke-width="1" class="shadow-sm"/>
+      <text x="24" y="36" class="font-sans" font-size="16" font-weight="700" fill="#17384D">门诊核心快捷操作</text>
+      <text x="24" y="60" class="font-sans" font-size="12" fill="#7E96A4">遵循门诊标准规范：先查询建档，再登记治疗服务并完成多方式收费</text>
+      
+      <!-- Action Buttons -->
+      <g transform="translate(480, 24)">
+        <!-- Button 1 Primary -->
+        <rect x="0" y="0" width="150" height="42" rx="8" fill="url(#primaryGrad)"/>
+        <text x="75" y="26" class="font-sans" font-size="13" font-weight="700" fill="#FFFFFF" text-anchor="middle">＋ 新建患者档案</text>
+        
+        <!-- Button 2 -->
+        <rect x="165" y="0" width="140" height="42" rx="8" fill="#F0F7F6" stroke="#BCE3DA" stroke-width="1"/>
+        <text x="235" y="26" class="font-sans" font-size="13" font-weight="700" fill="#087F6D" text-anchor="middle">⚡ 发起治疗登记</text>
+
+        <!-- Button 3 -->
+        <rect x="320" y="0" width="150" height="42" rx="8" fill="#FFFFFF" stroke="#D3E2EA" stroke-width="1"/>
+        <text x="395" y="26" class="font-sans" font-size="13" font-weight="600" fill="#2E4D60" text-anchor="middle">账单查询与收银</text>
+
+        <!-- Button 4 -->
+        <rect x="485" y="0" width="150" height="42" rx="8" fill="#FFFFFF" stroke="#D3E2EA" stroke-width="1"/>
+        <text x="560" y="26" class="font-sans" font-size="13" font-weight="600" fill="#2E4D60" text-anchor="middle">预存充值 / 划扣</text>
+      </g>
+    </g>
+
+    <!-- Two-Column Layout: Left Recent Treatments (Table), Right Notifications & Doctor Schedule -->
+    <g transform="translate(0, 322)">
+      <!-- Left Box: 最近接诊记录 -->
+      <g transform="translate(0, 0)">
+        <rect x="0" y="0" width="760" height="450" rx="14" fill="#FFFFFF" stroke="#E1EBF0" stroke-width="1" class="shadow-sm"/>
+        <text x="24" y="38" class="font-sans" font-size="16" font-weight="700" fill="#17384D">今日就诊及治疗记录</text>
+        <text x="180" y="38" class="font-sans" font-size="12" fill="#849DAA">(共 19 条就诊登记 · 实时更新)</text>
+        
+        <!-- Search bar inside table -->
+        <rect x="520" y="18" width="216" height="30" rx="6" fill="#F4F8FA" stroke="#D9E6ED" stroke-width="1"/>
+        <text x="532" y="38" class="font-sans" font-size="12" fill="#9CB2C0">快速过滤姓名/病历号...</text>
+
+        <!-- Table Header -->
+        <rect x="24" y="64" width="712" height="36" rx="6" fill="#EDF6F4"/>
+        <text x="40" y="87" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">患者姓名 / 档案</text>
+        <text x="180" y="87" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">类型</text>
+        <text x="250" y="87" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">推拿治疗项目</text>
+        <text x="410" y="87" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">主治治疗师</text>
+        <text x="520" y="87" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">金额</text>
+        <text x="610" y="87" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">收费状态</text>
+
+        <!-- Row 1 -->
+        <line x1="24" y1="140" x2="736" y2="140" stroke="#F0F4F7" stroke-width="1"/>
+        <text x="40" y="122" class="font-sans" font-size="13" font-weight="700" fill="#16384C">张建国</text>
+        <text x="96" y="122" class="font-sans" font-size="11" fill="#88A0AE">#P000108</text>
+        <rect x="180" y="108" width="46" height="20" rx="4" fill="#E7F3F9"/>
+        <text x="188" y="122" class="font-sans" font-size="11" font-weight="600" fill="#1E6589">成人</text>
+        <text x="250" y="122" class="font-sans" font-size="13" fill="#264455">颈肩综合推拿理疗 (60分)</text>
+        <text x="410" y="122" class="font-sans" font-size="13" fill="#264455">李振华</text>
+        <text x="520" y="122" class="font-sans" font-size="13" font-weight="700" fill="#16384C">¥ 180.00</text>
+        <rect x="605" y="108" width="60" height="22" rx="4" fill="#D1EFE8"/>
+        <text x="635" y="123" class="font-sans" font-size="11" font-weight="700" fill="#087F6D" text-anchor="middle">已支付</text>
+
+        <!-- Row 2 -->
+        <line x1="24" y1="184" x2="736" y2="184" stroke="#F0F4F7" stroke-width="1"/>
+        <text x="40" y="166" class="font-sans" font-size="13" font-weight="700" fill="#16384C">刘浩宇 (小儿)</text>
+        <text x="130" y="166" class="font-sans" font-size="11" fill="#88A0AE">#P000109</text>
+        <rect x="180" y="152" width="46" height="20" rx="4" fill="#FEF2E2"/>
+        <text x="188" y="166" class="font-sans" font-size="11" font-weight="600" fill="#C26A08">小儿</text>
+        <text x="250" y="166" class="font-sans" font-size="13" fill="#264455">小儿积食调理推拿 (30分)</text>
+        <text x="410" y="166" class="font-sans" font-size="13" fill="#264455">王春兰</text>
+        <text x="520" y="166" class="font-sans" font-size="13" font-weight="700" fill="#16384C">¥ 120.00</text>
+        <rect x="605" y="152" width="60" height="22" rx="4" fill="#D1EFE8"/>
+        <text x="635" y="167" class="font-sans" font-size="11" font-weight="700" fill="#087F6D" text-anchor="middle">已支付</text>
+
+        <!-- Row 3 -->
+        <line x1="24" y1="228" x2="736" y2="228" stroke="#F0F4F7" stroke-width="1"/>
+        <text x="40" y="210" class="font-sans" font-size="13" font-weight="700" fill="#16384C">陈玉玲</text>
+        <text x="96" y="210" class="font-sans" font-size="11" fill="#88A0AE">#P000094</text>
+        <rect x="180" y="196" width="46" height="20" rx="4" fill="#E7F3F9"/>
+        <text x="188" y="210" class="font-sans" font-size="11" font-weight="600" fill="#1E6589">成人</text>
+        <text x="250" y="210" class="font-sans" font-size="13" fill="#264455">腰椎间盘突出牵引与推拿</text>
+        <text x="410" y="210" class="font-sans" font-size="13" fill="#264455">李振华</text>
+        <text x="520" y="210" class="font-sans" font-size="13" font-weight="700" fill="#16384C">¥ 220.00</text>
+        <rect x="605" y="196" width="70" height="22" rx="4" fill="#FEE7E6"/>
+        <text x="640" y="211" class="font-sans" font-size="11" font-weight="700" fill="#DC2626" text-anchor="middle">待收费 (08m)</text>
+
+        <!-- Row 4 -->
+        <line x1="24" y1="272" x2="736" y2="272" stroke="#F0F4F7" stroke-width="1"/>
+        <text x="40" y="254" class="font-sans" font-size="13" font-weight="700" fill="#16384C">赵文博</text>
+        <text x="96" y="254" class="font-sans" font-size="11" fill="#88A0AE">#P000082</text>
+        <rect x="180" y="240" width="46" height="20" rx="4" fill="#E7F3F9"/>
+        <text x="188" y="254" class="font-sans" font-size="11" font-weight="600" fill="#1E6589">成人</text>
+        <text x="250" y="254" class="font-sans" font-size="13" fill="#264455">中医正骨骨盆矫正 (45分)</text>
+        <text x="410" y="254" class="font-sans" font-size="13" fill="#264455">周明</text>
+        <text x="520" y="254" class="font-sans" font-size="13" font-weight="700" fill="#16384C">¥ 260.00</text>
+        <rect x="605" y="240" width="60" height="22" rx="4" fill="#D1EFE8"/>
+        <text x="635" y="255" class="font-sans" font-size="11" font-weight="700" fill="#087F6D" text-anchor="middle">已支付</text>
+
+        <!-- Row 5 -->
+        <line x1="24" y1="316" x2="736" y2="316" stroke="#F0F4F7" stroke-width="1"/>
+        <text x="40" y="298" class="font-sans" font-size="13" font-weight="700" fill="#16384C">孙思萌 (小儿)</text>
+        <text x="130" y="298" class="font-sans" font-size="11" fill="#88A0AE">#P000110</text>
+        <rect x="180" y="284" width="46" height="20" rx="4" fill="#FEF2E2"/>
+        <text x="188" y="298" class="font-sans" font-size="11" font-weight="600" fill="#C26A08">小儿</text>
+        <text x="250" y="298" class="font-sans" font-size="13" fill="#264455">小儿外感咳嗽推拿 (30分)</text>
+        <text x="410" y="298" class="font-sans" font-size="13" fill="#264455">王春兰</text>
+        <text x="520" y="298" class="font-sans" font-size="13" font-weight="700" fill="#16384C">¥ 120.00</text>
+        <rect x="605" y="284" width="60" height="22" rx="4" fill="#D1EFE8"/>
+        <text x="635" y="299" class="font-sans" font-size="11" font-weight="700" fill="#087F6D" text-anchor="middle">已支付</text>
+        
+        <!-- Table bottom status -->
+        <g transform="translate(24, 400)">
+          <text x="0" y="16" class="font-sans" font-size="12" fill="#758E9D">正在显示第 1 至 5 条记录（今日接诊 19 人次）</text>
+          <text x="640" y="16" class="font-sans" font-size="12" font-weight="600" fill="#087F6D">查看全部接诊 →</text>
+        </g>
+      </g>
+
+      <!-- Right Box: 门诊业务规则提醒 & 治疗师出诊状态 -->
+      <g transform="translate(780, 0)">
+        <!-- Box 1 门诊合规与规则指示 -->
+        <rect x="0" y="0" width="370" height="210" rx="14" fill="#FFFFFF" stroke="#E1EBF0" stroke-width="1" class="shadow-sm"/>
+        <text x="20" y="34" class="font-sans" font-size="15" font-weight="700" fill="#17384D">门诊核心业务规则提醒</text>
+        
+        <g transform="translate(20, 52)">
+          <circle cx="6" cy="10" r="3" fill="#DC2626"/>
+          <text x="16" y="14" class="font-sans" font-size="12" font-weight="600" fill="#264152">严格禁止欠费挂账</text>
+          <text x="16" y="30" class="font-sans" font-size="11" fill="#728B99">待收费账单若超过30分钟未结算将自动作废</text>
+
+          <circle cx="6" cy="52" r="3" fill="#087F6D"/>
+          <text x="16" y="56" class="font-sans" font-size="12" font-weight="600" fill="#264152">小儿建档监护人严格校验</text>
+          <text x="16" y="72" class="font-sans" font-size="11" fill="#728B99">小儿患者必须录入监护人姓名、关系与联系电话</text>
+
+          <circle cx="6" cy="94" r="3" fill="#2563EB"/>
+          <text x="16" y="98" class="font-sans" font-size="12" font-weight="600" fill="#264152">预存账户双写流水审计</text>
+          <text x="16" y="114" class="font-sans" font-size="11" fill="#728B99">充值、消费及退款均按流水追溯且余额不能为负</text>
+        </g>
+
+        <!-- Box 2 今日在职治疗师出诊一览 -->
+        <g transform="translate(0, 226)">
+          <rect x="0" y="0" width="370" height="224" rx="14" fill="#FFFFFF" stroke="#E1EBF0" stroke-width="1" class="shadow-sm"/>
+          <text x="20" y="34" class="font-sans" font-size="15" font-weight="700" fill="#17384D">在职治疗师状态 (3人值班)</text>
+          
+          <!-- Therapist 1 -->
+          <g transform="translate(20, 52)">
+            <circle cx="16" cy="16" r="14" fill="#D7EDE7"/>
+            <text x="16" y="20" class="font-sans" font-size="11" font-weight="700" fill="#087F6D" text-anchor="middle">李</text>
+            <text x="40" y="16" class="font-sans" font-size="13" font-weight="700" fill="#1A384A">李振华 (主任治疗师)</text>
+            <text x="40" y="30" class="font-sans" font-size="11" fill="#7893A2">成人脊柱与颈肩推拿 · 今日已接诊 8 人</text>
+            <rect x="270" y="6" width="60" height="20" rx="4" fill="#DCFCE7"/>
+            <text x="300" y="20" class="font-sans" font-size="10" font-weight="700" fill="#15803D" text-anchor="middle">接诊中</text>
+          </g>
+
+          <!-- Therapist 2 -->
+          <g transform="translate(20, 104)">
+            <circle cx="16" cy="16" r="14" fill="#FEF3C7"/>
+            <text x="16" y="20" class="font-sans" font-size="11" font-weight="700" fill="#B45309" text-anchor="middle">王</text>
+            <text x="40" y="16" class="font-sans" font-size="13" font-weight="700" fill="#1A384A">王春兰 (资深儿推师)</text>
+            <text x="40" y="30" class="font-sans" font-size="11" fill="#7893A2">小儿积食调理 / 呼吸道 · 今日已接诊 7 人</text>
+            <rect x="270" y="6" width="60" height="20" rx="4" fill="#DCFCE7"/>
+            <text x="300" y="20" class="font-sans" font-size="10" font-weight="700" fill="#15803D" text-anchor="middle">接诊中</text>
+          </g>
+
+          <!-- Therapist 3 -->
+          <g transform="translate(20, 156)">
+            <circle cx="16" cy="16" r="14" fill="#E2E8F0"/>
+            <text x="16" y="20" class="font-sans" font-size="11" font-weight="700" fill="#475569" text-anchor="middle">周</text>
+            <text x="40" y="16" class="font-sans" font-size="13" font-weight="700" fill="#1A384A">周明 (正骨推拿师)</text>
+            <text x="40" y="30" class="font-sans" font-size="11" fill="#7893A2">骨盆调理与肌肉松解 · 今日已接诊 4 人</text>
+            <rect x="270" y="6" width="60" height="20" rx="4" fill="#F1F5F9"/>
+            <text x="300" y="20" class="font-sans" font-size="10" font-weight="700" fill="#64748B" text-anchor="middle">空闲</text>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+"""
+    return svg_header + shell + content + "\n</svg>"
+
+with open("ui_render/01_dashboard.svg", "w", encoding="utf-8") as f:
+    f.write(build_dashboard())
+print("Dashboard SVG written")

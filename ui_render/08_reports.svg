@@ -1,0 +1,241 @@
+<svg width="1440" height="900" viewBox="0 0 1440 900" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .font-sans { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif; }
+      .shadow-sm { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.04)); }
+      .shadow-md { filter: drop-shadow(0 4px 12px rgba(16,40,32,0.06)); }
+      .shadow-lg { filter: drop-shadow(0 10px 25px rgba(16,40,32,0.08)); }
+    </style>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#087F6D" />
+      <stop offset="100%" stop-color="#149A84" />
+    </linearGradient>
+    <linearGradient id="primaryCardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#F2F9F7" />
+    </linearGradient>
+    <linearGradient id="warmCardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#FFFBF5" />
+    </linearGradient>
+    <linearGradient id="blueCardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#F4F8FC" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="1440" height="900" fill="#F4F7F9" />
+
+  <!-- macOS/Windows Window Frame & Header -->
+  <rect x="0" y="0" width="1440" height="64" fill="#FFFFFF" class="shadow-sm"/>
+  <line x1="0" y1="64" x2="1440" y2="64" stroke="#E5EDF0" stroke-width="1"/>
+
+  <!-- Window controls -->
+  <circle cx="24" cy="32" r="6" fill="#FF5F56"/>
+  <circle cx="44" cy="32" r="6" fill="#FFBD2E"/>
+  <circle cx="64" cy="32" r="6" fill="#27C93F"/>
+
+  <!-- Brand Logo & Clinic Info -->
+  <g transform="translate(100, 14)">
+    <rect x="0" y="0" width="36" height="36" rx="9" fill="url(#primaryGrad)"/>
+    <path d="M18 10 V26 M10 18 H26" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round"/>
+    <text x="46" y="22" class="font-sans" font-size="18" font-weight="700" fill="#13334A">HealTouch</text>
+    <text x="142" y="22" class="font-sans" font-size="12" font-weight="500" fill="#087F6D" letter-spacing="1">门诊专业版 V2.4</text>
+    <text x="46" y="34" class="font-sans" font-size="11" fill="#7892A0">和康堂中医推拿门诊</text>
+  </g>
+
+  <!-- Top Right Operator Info -->
+  <g transform="translate(1120, 16)">
+    <rect x="0" y="0" width="200" height="32" rx="16" fill="#F0F5F8"/>
+    <circle cx="16" cy="16" r="11" fill="#087F6D"/>
+    <text x="16" y="20" class="font-sans" font-size="11" font-weight="600" fill="#FFFFFF" text-anchor="middle">李</text>
+    <text x="36" y="20" class="font-sans" font-size="12" font-weight="600" fill="#244255">李医生 (主任治疗师)</text>
+    <rect x="215" y="0" width="80" height="32" rx="6" fill="#FFFFFF" stroke="#D3E0E8" stroke-width="1"/>
+    <text x="255" y="20" class="font-sans" font-size="12" font-weight="600" fill="#668292" text-anchor="middle">退出登录</text>
+  </g>
+
+  <!-- Left Sidebar Navigation -->
+  <rect x="0" y="64" width="220" height="836" fill="#FFFFFF"/>
+  <line x1="220" y1="64" x2="220" y2="900" stroke="#E5EDF0" stroke-width="1"/>
+
+  <text x="24" y="96" class="font-sans" font-size="11" font-weight="700" fill="#8DA4B0" letter-spacing="0.5">核心门诊业务</text>
+
+  <g transform="translate(12, 110)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="transparent"/>
+    <circle cx="20" cy="20" r="10" fill="#F2F6F8"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#829BA8" text-anchor="middle">01</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="500" fill="#415E70">首页工作台</text>
+  </g>
+  
+
+  <g transform="translate(12, 156)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="transparent"/>
+    <circle cx="20" cy="20" r="10" fill="#F2F6F8"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#829BA8" text-anchor="middle">02</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="500" fill="#415E70">患者档案</text>
+  </g>
+  
+
+  <g transform="translate(12, 202)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="transparent"/>
+    <circle cx="20" cy="20" r="10" fill="#F2F6F8"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#829BA8" text-anchor="middle">03</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="500" fill="#415E70">治疗登记</text>
+  </g>
+  
+
+  <g transform="translate(12, 248)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="transparent"/>
+    <circle cx="20" cy="20" r="10" fill="#F2F6F8"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#829BA8" text-anchor="middle">04</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="500" fill="#415E70">账单与收费</text>
+  </g>
+  
+
+  <g transform="translate(12, 294)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="transparent"/>
+    <circle cx="20" cy="20" r="10" fill="#F2F6F8"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#829BA8" text-anchor="middle">05</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="500" fill="#415E70">退款审批</text>
+  </g>
+  
+
+  <g transform="translate(12, 340)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="transparent"/>
+    <circle cx="20" cy="20" r="10" fill="#F2F6F8"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#829BA8" text-anchor="middle">06</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="500" fill="#415E70">预存管理</text>
+  </g>
+  
+
+  <g transform="translate(12, 386)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="#E8F6F3"/>
+    <circle cx="20" cy="20" r="10" fill="#C8EBE3"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#087F6D" text-anchor="middle">07</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="700" fill="#087F6D">数据统计</text>
+  </g>
+  <rect x="216" y="386" width="4" height="40" rx="2" fill="#087F6D"/>
+
+  <line x1="24" y1="442" x2="196" y2="442" stroke="#EDF2F5" stroke-width="1"/>
+  <text x="24" y="466" class="font-sans" font-size="11" font-weight="700" fill="#8DA4B0" letter-spacing="0.5">门诊运维设置</text>
+
+  <g transform="translate(12, 478)">
+    <rect x="0" y="0" width="196" height="38" rx="8" fill="transparent"/>
+    <text x="40" y="24" class="font-sans" font-size="13" font-weight="500" fill="#587383">用户管理</text>
+  </g>
+
+  <g transform="translate(12, 520)">
+    <rect x="0" y="0" width="196" height="38" rx="8" fill="transparent"/>
+    <text x="40" y="24" class="font-sans" font-size="13" font-weight="500" fill="#587383">治疗项目</text>
+  </g>
+
+  <g transform="translate(12, 562)">
+    <rect x="0" y="0" width="196" height="38" rx="8" fill="transparent"/>
+    <text x="40" y="24" class="font-sans" font-size="13" font-weight="500" fill="#587383">权限管理</text>
+  </g>
+
+  <g transform="translate(16, 840)">
+    <rect x="0" y="0" width="188" height="44" rx="8" fill="#F7FAFC" stroke="#E3EBEF" stroke-width="1"/>
+    <circle cx="16" cy="22" r="4" fill="#10B981"/>
+    <text x="28" y="20" class="font-sans" font-size="11" font-weight="600" fill="#2E4A5C">本地 SQLite 数据库在线</text>
+    <text x="28" y="34" class="font-sans" font-size="10" fill="#8CA1AE">就诊记录实时双写保障</text>
+  </g>
+
+  <!-- Main Report & Analytics Area -->
+  <g transform="translate(252, 92)">
+    <text x="0" y="24" class="font-sans" font-size="24" font-weight="700" fill="#13334A">门诊经营与财务统计</text>
+    <text x="0" y="46" class="font-sans" font-size="13" fill="#668292">多维度经营核算：营业额走势、治疗师接诊绩效工分、预存现金流及推拿项目排行榜</text>
+
+    <!-- Top Time Selector Bar -->
+    <g transform="translate(0, 68)">
+      <rect x="0" y="0" width="1140" height="52" rx="10" fill="#FFFFFF" stroke="#E1EBF0" stroke-width="1" class="shadow-sm"/>
+      <g transform="translate(16, 10)">
+        <rect x="0" y="0" width="90" height="32" rx="6" fill="#087F6D"/>
+        <text x="45" y="21" class="font-sans" font-size="12" font-weight="700" fill="#FFFFFF" text-anchor="middle">今日汇总</text>
+        <rect x="100" y="0" width="90" height="32" rx="6" fill="#F0F5F8"/>
+        <text x="145" y="21" class="font-sans" font-size="12" font-weight="600" fill="#3D5B6D" text-anchor="middle">本周统计</text>
+        <rect x="200" y="0" width="90" height="32" rx="6" fill="#F0F5F8"/>
+        <text x="245" y="21" class="font-sans" font-size="12" font-weight="600" fill="#3D5B6D" text-anchor="middle">本月汇总</text>
+        <rect x="300" y="0" width="90" height="32" rx="6" fill="#F0F5F8"/>
+        <text x="345" y="21" class="font-sans" font-size="12" font-weight="600" fill="#3D5B6D" text-anchor="middle">自定义区间</text>
+      </g>
+      <g transform="translate(980, 10)">
+        <rect x="0" y="0" width="144" height="32" rx="6" fill="#F8FAFC" stroke="#D3E2EA" stroke-width="1"/>
+        <text x="72" y="21" class="font-sans" font-size="12" font-weight="600" fill="#3E5C6E" text-anchor="middle">⬇ 导出财务分析报表</text>
+      </g>
+    </g>
+
+    <!-- Visual Charts Grid (Top Row: 2 Big Cards) -->
+    <g transform="translate(0, 136)">
+      <!-- Left Chart: 7-Day Revenue Trend -->
+      <g transform="translate(0, 0)">
+        <rect x="0" y="0" width="670" height="320" rx="12" fill="#FFFFFF" stroke="#E1EBF0" stroke-width="1" class="shadow-sm"/>
+        <text x="20" y="32" class="font-sans" font-size="15" font-weight="700" fill="#17384D">门诊近 7 日净收入走势 (已扣除退款)</text>
+        <text x="560" y="32" class="font-sans" font-size="12" font-weight="700" fill="#087F6D">周总额 ¥ 32,840</text>
+        
+        <!-- SVG Polyline Chart -->
+        <g transform="translate(30, 70)">
+          <!-- Axis lines -->
+          <line x1="40" y1="20" x2="600" y2="20" stroke="#F1F5F8" stroke-width="1"/>
+          <line x1="40" y1="80" x2="600" y2="80" stroke="#F1F5F8" stroke-width="1"/>
+          <line x1="40" y1="140" x2="600" y2="140" stroke="#F1F5F8" stroke-width="1"/>
+          <line x1="40" y1="200" x2="600" y2="200" stroke="#D9E5EC" stroke-width="1"/>
+          
+          <text x="30" y="24" class="font-sans" font-size="10" fill="#8CA4B2" text-anchor="end">6k</text>
+          <text x="30" y="84" class="font-sans" font-size="10" fill="#8CA4B2" text-anchor="end">4k</text>
+          <text x="30" y="144" class="font-sans" font-size="10" fill="#8CA4B2" text-anchor="end">2k</text>
+          <text x="30" y="204" class="font-sans" font-size="10" fill="#8CA4B2" text-anchor="end">0</text>
+
+          <!-- Day Labels -->
+          <text x="80" y="222" class="font-sans" font-size="11" fill="#718E9E" text-anchor="middle">10-12 周一</text>
+          <text x="160" y="222" class="font-sans" font-size="11" fill="#718E9E" text-anchor="middle">10-13 周二</text>
+          <text x="240" y="222" class="font-sans" font-size="11" fill="#718E9E" text-anchor="middle">10-14 周三</text>
+          <text x="320" y="222" class="font-sans" font-size="11" fill="#718E9E" text-anchor="middle">10-15 周四</text>
+          <text x="400" y="222" class="font-sans" font-size="11" fill="#718E9E" text-anchor="middle">10-16 周五</text>
+          <text x="480" y="222" class="font-sans" font-size="11" fill="#718E9E" text-anchor="middle">10-17 周六</text>
+          <text x="560" y="222" class="font-sans" font-size="11" font-weight="700" fill="#087F6D" text-anchor="middle">10-18 今日</text>
+
+          <!-- Trend Line -->
+          <polyline points="80,120 160,110 240,90 320,105 400,60 480,40 560,54" fill="none" stroke="#087F6D" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="560" cy="54" r="5" fill="#087F6D" stroke="#FFFFFF" stroke-width="2"/>
+          <text x="560" y="40" class="font-sans" font-size="11" font-weight="700" fill="#087F6D" text-anchor="middle">¥4,860</text>
+        </g>
+      </g>
+
+      <!-- Right Chart: Therapist Performance -->
+      <g transform="translate(690, 0)">
+        <rect x="0" y="0" width="450" height="320" rx="12" fill="#FFFFFF" stroke="#E1EBF0" stroke-width="1" class="shadow-sm"/>
+        <text x="20" y="32" class="font-sans" font-size="15" font-weight="700" fill="#17384D">在职治疗师接诊绩效排行榜</text>
+
+        <!-- Rank 1 -->
+        <g transform="translate(20, 60)">
+          <text x="0" y="16" class="font-sans" font-size="13" font-weight="700" fill="#13334A">1. 李振华 (主任推拿师)</text>
+          <text x="350" y="16" class="font-sans" font-size="13" font-weight="700" fill="#087F6D">¥ 2,080</text>
+          <rect x="0" y="24" width="410" height="10" rx="5" fill="#EEF3F6"/>
+          <rect x="0" y="24" width="310" height="10" rx="5" fill="#087F6D"/>
+          <text x="0" y="48" class="font-sans" font-size="11" fill="#718E9E">今日接诊 8 人次 · 成人重症推拿专精</text>
+        </g>
+
+        <!-- Rank 2 -->
+        <g transform="translate(20, 130)">
+          <text x="0" y="16" class="font-sans" font-size="13" font-weight="700" fill="#13334A">2. 王春兰 (资深儿推师)</text>
+          <text x="350" y="16" class="font-sans" font-size="13" font-weight="700" fill="#087F6D">¥ 1,740</text>
+          <rect x="0" y="24" width="410" height="10" rx="5" fill="#EEF3F6"/>
+          <rect x="0" y="24" width="260" height="10" rx="5" fill="#149A84"/>
+          <text x="0" y="48" class="font-sans" font-size="11" fill="#718E9E">今日接诊 7 人次 · 小儿推拿/呼吸调理</text>
+        </g>
+
+        <!-- Rank 3 -->
+        <g transform="translate(20, 200)">
+          <text x="0" y="16" class="font-sans" font-size="13" font-weight="700" fill="#13334A">3. 周明 (正骨推拿师)</text>
+          <text x="350" y="16" class="font-sans" font-size="13" font-weight="700" fill="#087F6D">¥ 1,040</text>
+          <rect x="0" y="24" width="410" height="10" rx="5" fill="#EEF3F6"/>
+          <rect x="0" y="24" width="160" height="10" rx="5" fill="#60A5FA"/>
+          <text x="0" y="48" class="font-sans" font-size="11" fill="#718E9E">今日接诊 4 人次 · 骨盆调理与肌肉松解</text>
+        </g>
+      </g>
+    </g>
+  </g>
+
+</svg>

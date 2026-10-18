@@ -23,35 +23,89 @@ public class RefundPage {
   }
 
   public Parent node() {
-    Button approve = new Button("审批通过");
+    Button approve = Ui.primaryButton("✓ 审批通过");
     approve.setOnAction(e -> decide(true));
-    Button reject = new Button("驳回");
+
+    Button reject = Ui.dangerButton("✕ 驳回申请");
     reject.setOnAction(e -> decide(false));
-    Button execute = new Button("执行退款");
+
+    Button execute = Ui.secondaryButton("⚡ 执行冲正退款");
     execute.setOnAction(
         e -> {
           try {
             RefundSummary r = selected();
             services.refunds.execute(session, r.id);
             load();
-            Ui.info("退款已执行，相关预存流水已生成。");
+            Ui.info("退款冲正已成功执行，相关预存资金流水已自动冲销入账！");
           } catch (Exception x) {
             Ui.error(x);
           }
         });
-    table
-        .getColumns()
-        .addAll(
-            col("退款单", x -> x.refundCode),
-            col("账单", x -> x.billCode),
-            col("患者", x -> x.patientName),
-            col("金额", x -> Money.format(x.amountCents)),
-            col("状态", x -> status(x.status)),
-            col("申请人", x -> x.applicantName),
-            col("审批人", x -> x.approverName == null ? "" : x.approverName));
+
+    Button refresh = new Button("刷新列表");
+    refresh.setOnAction(e -> load());
+
+    HBox tb = Ui.toolbar(refresh, Ui.spacer(), approve, reject, execute);
+
+    TableColumn<RefundSummary, String> codeCol = col("退款申请单号", x -> x.refundCode);
+    codeCol.setPrefWidth(150);
+    codeCol.setStyle("-fx-font-weight: bold;");
+
+    TableColumn<RefundSummary, String> billCol = col("原就诊账单", x -> x.billCode);
+    billCol.setPrefWidth(140);
+
+    TableColumn<RefundSummary, String> patientCol = col("就诊患者", x -> x.patientName);
+    patientCol.setPrefWidth(110);
+
+    TableColumn<RefundSummary, String> amountCol = col("申请退款金额", x -> Money.format(x.amountCents));
+    amountCol.setPrefWidth(130);
+    amountCol.setStyle("-fx-font-weight: bold; -fx-text-fill: #DC2626;");
+
+    TableColumn<RefundSummary, String> statusCol = col("审批状态", x -> status(x.status));
+    statusCol.setPrefWidth(110);
+    statusCol.setCellFactory(c -> new TableCell<RefundSummary, String>() {
+      @Override
+      protected void updateItem(String item, boolean empty) {
+        super.updateItem(item, empty);
+        if (empty || item == null) {
+          setText(null);
+          setGraphic(null);
+        } else {
+          setText(item);
+          if ("待审批".equals(item)) {
+            setStyle("-fx-text-fill: #D97706; -fx-font-weight: bold;");
+          } else if ("已审批".equals(item) || "已执行".equals(item)) {
+            setStyle("-fx-text-fill: #087F6D; -fx-font-weight: bold;");
+          } else if ("已驳回".equals(item)) {
+            setStyle("-fx-text-fill: #DC2626; -fx-font-weight: bold;");
+          }
+        }
+      }
+    });
+
+    TableColumn<RefundSummary, String> applicantCol = col("申请人 / 经手人", x -> x.applicantName);
+    applicantCol.setPrefWidth(130);
+
+    TableColumn<RefundSummary, String> approverCol = col("最终审批人", x -> x.approverName == null ? "待审批" : x.approverName);
+    approverCol.setPrefWidth(130);
+
+    table.getColumns().addAll(
+        codeCol,
+        billCol,
+        patientCol,
+        amountCol,
+        statusCol,
+        applicantCol,
+        approverCol);
+
     table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
     VBox.setVgrow(table, Priority.ALWAYS);
-    VBox page = Ui.page("退款审批", new HBox(8, approve, reject, execute), table);
+
+    VBox page = Ui.page(
+        "退款审批与冲正管理",
+        "财务风控原则：退款须由前台/治疗师申请，经系统管理员审核批准后原路冲正，全流程审计留痕",
+        tb,
+        table);
     load();
     return page;
   }
@@ -59,9 +113,9 @@ public class RefundPage {
   private void decide(boolean approve) {
     try {
       RefundSummary r = selected();
-      services.refunds.approve(session, r.id, approve, approve ? "审批通过" : "审批驳回");
+      services.refunds.approve(session, r.id, approve, approve ? "门诊管理员审核通过" : "退款理由不充分，予以驳回");
       load();
-      Ui.info(approve ? "已审批通过" : "已驳回退款申请");
+      Ui.info(approve ? "退款申请已批准！请在核验后点击【执行冲正退款】完成资金原路冲正。" : "已成功驳回该退款申请。");
     } catch (Exception e) {
       Ui.error(e);
     }
@@ -69,7 +123,7 @@ public class RefundPage {
 
   private RefundSummary selected() {
     RefundSummary r = table.getSelectionModel().getSelectedItem();
-    if (r == null) throw new IllegalArgumentException("请选择退款单");
+    if (r == null) throw new IllegalArgumentException("请在列表中选择需要操作的退款单据");
     return r;
   }
 

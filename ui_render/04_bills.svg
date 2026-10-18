@@ -1,0 +1,259 @@
+<svg width="1440" height="900" viewBox="0 0 1440 900" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .font-sans { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif; }
+      .shadow-sm { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.04)); }
+      .shadow-md { filter: drop-shadow(0 4px 12px rgba(16,40,32,0.06)); }
+      .shadow-lg { filter: drop-shadow(0 10px 25px rgba(16,40,32,0.08)); }
+    </style>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#087F6D" />
+      <stop offset="100%" stop-color="#149A84" />
+    </linearGradient>
+    <linearGradient id="primaryCardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#F2F9F7" />
+    </linearGradient>
+    <linearGradient id="warmCardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#FFFBF5" />
+    </linearGradient>
+    <linearGradient id="blueCardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#F4F8FC" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="1440" height="900" fill="#F4F7F9" />
+
+  <!-- macOS/Windows Window Frame & Header -->
+  <rect x="0" y="0" width="1440" height="64" fill="#FFFFFF" class="shadow-sm"/>
+  <line x1="0" y1="64" x2="1440" y2="64" stroke="#E5EDF0" stroke-width="1"/>
+
+  <!-- Window controls -->
+  <circle cx="24" cy="32" r="6" fill="#FF5F56"/>
+  <circle cx="44" cy="32" r="6" fill="#FFBD2E"/>
+  <circle cx="64" cy="32" r="6" fill="#27C93F"/>
+
+  <!-- Brand Logo & Clinic Info -->
+  <g transform="translate(100, 14)">
+    <rect x="0" y="0" width="36" height="36" rx="9" fill="url(#primaryGrad)"/>
+    <path d="M18 10 V26 M10 18 H26" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round"/>
+    <text x="46" y="22" class="font-sans" font-size="18" font-weight="700" fill="#13334A">HealTouch</text>
+    <text x="142" y="22" class="font-sans" font-size="12" font-weight="500" fill="#087F6D" letter-spacing="1">门诊专业版 V2.4</text>
+    <text x="46" y="34" class="font-sans" font-size="11" fill="#7892A0">和康堂中医推拿门诊</text>
+  </g>
+
+  <!-- Top Right Operator Info -->
+  <g transform="translate(1120, 16)">
+    <rect x="0" y="0" width="200" height="32" rx="16" fill="#F0F5F8"/>
+    <circle cx="16" cy="16" r="11" fill="#087F6D"/>
+    <text x="16" y="20" class="font-sans" font-size="11" font-weight="600" fill="#FFFFFF" text-anchor="middle">李</text>
+    <text x="36" y="20" class="font-sans" font-size="12" font-weight="600" fill="#244255">李医生 (主任治疗师)</text>
+    <rect x="215" y="0" width="80" height="32" rx="6" fill="#FFFFFF" stroke="#D3E0E8" stroke-width="1"/>
+    <text x="255" y="20" class="font-sans" font-size="12" font-weight="600" fill="#668292" text-anchor="middle">退出登录</text>
+  </g>
+
+  <!-- Left Sidebar Navigation -->
+  <rect x="0" y="64" width="220" height="836" fill="#FFFFFF"/>
+  <line x1="220" y1="64" x2="220" y2="900" stroke="#E5EDF0" stroke-width="1"/>
+
+  <text x="24" y="96" class="font-sans" font-size="11" font-weight="700" fill="#8DA4B0" letter-spacing="0.5">核心门诊业务</text>
+
+  <g transform="translate(12, 110)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="transparent"/>
+    <circle cx="20" cy="20" r="10" fill="#F2F6F8"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#829BA8" text-anchor="middle">01</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="500" fill="#415E70">首页工作台</text>
+  </g>
+  
+
+  <g transform="translate(12, 156)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="transparent"/>
+    <circle cx="20" cy="20" r="10" fill="#F2F6F8"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#829BA8" text-anchor="middle">02</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="500" fill="#415E70">患者档案</text>
+  </g>
+  
+
+  <g transform="translate(12, 202)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="transparent"/>
+    <circle cx="20" cy="20" r="10" fill="#F2F6F8"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#829BA8" text-anchor="middle">03</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="500" fill="#415E70">治疗登记</text>
+  </g>
+  
+
+  <g transform="translate(12, 248)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="#E8F6F3"/>
+    <circle cx="20" cy="20" r="10" fill="#C8EBE3"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#087F6D" text-anchor="middle">04</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="700" fill="#087F6D">账单与收费</text>
+  </g>
+  <rect x="216" y="248" width="4" height="40" rx="2" fill="#087F6D"/>
+
+  <g transform="translate(12, 294)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="transparent"/>
+    <circle cx="20" cy="20" r="10" fill="#F2F6F8"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#829BA8" text-anchor="middle">05</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="500" fill="#415E70">退款审批</text>
+  </g>
+  
+
+  <g transform="translate(12, 340)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="transparent"/>
+    <circle cx="20" cy="20" r="10" fill="#F2F6F8"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#829BA8" text-anchor="middle">06</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="500" fill="#415E70">预存管理</text>
+  </g>
+  
+
+  <g transform="translate(12, 386)">
+    <rect x="0" y="0" width="196" height="40" rx="8" fill="transparent"/>
+    <circle cx="20" cy="20" r="10" fill="#F2F6F8"/>
+    <text x="20" y="24" class="font-sans" font-size="10" font-weight="700" fill="#829BA8" text-anchor="middle">07</text>
+    <text x="40" y="25" class="font-sans" font-size="14" font-weight="500" fill="#415E70">数据统计</text>
+  </g>
+  
+
+  <line x1="24" y1="442" x2="196" y2="442" stroke="#EDF2F5" stroke-width="1"/>
+  <text x="24" y="466" class="font-sans" font-size="11" font-weight="700" fill="#8DA4B0" letter-spacing="0.5">门诊运维设置</text>
+
+  <g transform="translate(12, 478)">
+    <rect x="0" y="0" width="196" height="38" rx="8" fill="transparent"/>
+    <text x="40" y="24" class="font-sans" font-size="13" font-weight="500" fill="#587383">用户管理</text>
+  </g>
+
+  <g transform="translate(12, 520)">
+    <rect x="0" y="0" width="196" height="38" rx="8" fill="transparent"/>
+    <text x="40" y="24" class="font-sans" font-size="13" font-weight="500" fill="#587383">治疗项目</text>
+  </g>
+
+  <g transform="translate(12, 562)">
+    <rect x="0" y="0" width="196" height="38" rx="8" fill="transparent"/>
+    <text x="40" y="24" class="font-sans" font-size="13" font-weight="500" fill="#587383">权限管理</text>
+  </g>
+
+  <g transform="translate(16, 840)">
+    <rect x="0" y="0" width="188" height="44" rx="8" fill="#F7FAFC" stroke="#E3EBEF" stroke-width="1"/>
+    <circle cx="16" cy="22" r="4" fill="#10B981"/>
+    <text x="28" y="20" class="font-sans" font-size="11" font-weight="600" fill="#2E4A5C">本地 SQLite 数据库在线</text>
+    <text x="28" y="34" class="font-sans" font-size="10" fill="#8CA1AE">就诊记录实时双写保障</text>
+  </g>
+
+  <!-- Main Bills Management Area -->
+  <g transform="translate(252, 92)">
+    <text x="0" y="24" class="font-sans" font-size="24" font-weight="700" fill="#13334A">账单与收银管理</text>
+    <text x="0" y="46" class="font-sans" font-size="13" fill="#668292">门诊收费原则：全额收齐、严禁欠费、支持预存/现金/微信/支付宝组合结算与多联收据打印</text>
+
+    <!-- Top KPI Cards -->
+    <g transform="translate(0, 68)">
+      <g transform="translate(0, 0)">
+        <rect x="0" y="0" width="270" height="96" rx="12" fill="#FFFFFF" stroke="#E1EBF0" stroke-width="1" class="shadow-sm"/>
+        <text x="20" y="30" class="font-sans" font-size="12" font-weight="600" fill="#718E9E">今日实收账单</text>
+        <text x="20" y="66" class="font-sans" font-size="28" font-weight="800" fill="#13334A">¥ 4,860.00</text>
+        <text x="200" y="66" class="font-sans" font-size="12" font-weight="600" fill="#087F6D">16 笔已结</text>
+      </g>
+      <g transform="translate(290, 0)">
+        <rect x="0" y="0" width="270" height="96" rx="12" fill="#FFFFFF" stroke="#E1EBF0" stroke-width="1" class="shadow-sm"/>
+        <text x="20" y="30" class="font-sans" font-size="12" font-weight="600" fill="#718E9E">待收单据 (30分钟超时作废)</text>
+        <text x="20" y="66" class="font-sans" font-size="28" font-weight="800" fill="#D97706">1 <tspan font-size="16" font-weight="500">笔待结</tspan></text>
+        <text x="180" y="66" class="font-sans" font-size="12" font-weight="600" fill="#D97706">¥ 180.00</text>
+      </g>
+      <g transform="translate(580, 0)">
+        <rect x="0" y="0" width="270" height="96" rx="12" fill="#FFFFFF" stroke="#E1EBF0" stroke-width="1" class="shadow-sm"/>
+        <text x="20" y="30" class="font-sans" font-size="12" font-weight="600" fill="#718E9E">预存账户划扣结算</text>
+        <text x="20" y="66" class="font-sans" font-size="28" font-weight="800" fill="#087F6D">¥ 1,820.00</text>
+        <text x="210" y="66" class="font-sans" font-size="12" fill="#718E9E">占比 37.4%</text>
+      </g>
+      <g transform="translate(870, 0)">
+        <rect x="0" y="0" width="270" height="96" rx="12" fill="#FFFFFF" stroke="#E1EBF0" stroke-width="1" class="shadow-sm"/>
+        <text x="20" y="30" class="font-sans" font-size="12" font-weight="600" fill="#718E9E">今日退款冲销</text>
+        <text x="20" y="66" class="font-sans" font-size="28" font-weight="800" fill="#DC2626">¥ 0.00</text>
+        <text x="210" y="66" class="font-sans" font-size="12" fill="#16A34A">无异常冲正</text>
+      </g>
+    </g>
+
+    <!-- Filter & Search Toolbar -->
+    <g transform="translate(0, 180)">
+      <rect x="0" y="0" width="1140" height="60" rx="10" fill="#FFFFFF" stroke="#E1EBF0" stroke-width="1" class="shadow-sm"/>
+      <g transform="translate(16, 12)">
+        <rect x="0" y="0" width="240" height="36" rx="6" fill="#F4F8FA" stroke="#D3E2EA" stroke-width="1"/>
+        <text x="14" y="23" class="font-sans" font-size="12" fill="#8CA4B2">搜索账单号 / 患者姓名 / 手机号</text>
+      </g>
+      <g transform="translate(270, 12)">
+        <rect x="0" y="0" width="150" height="36" rx="6" fill="#FFFFFF" stroke="#D3E2EA" stroke-width="1"/>
+        <text x="14" y="23" class="font-sans" font-size="12" fill="#2C485A">单据状态: 全部状态</text>
+      </g>
+      <g transform="translate(435, 12)">
+        <rect x="0" y="0" width="170" height="36" rx="6" fill="#FFFFFF" stroke="#D3E2EA" stroke-width="1"/>
+        <text x="14" y="23" class="font-sans" font-size="12" fill="#2C485A">支付方式: 全部渠道</text>
+      </g>
+      <g transform="translate(620, 12)">
+        <rect x="0" y="0" width="80" height="36" rx="6" fill="#087F6D"/>
+        <text x="40" y="23" class="font-sans" font-size="12" font-weight="600" fill="#FFFFFF" text-anchor="middle">查询</text>
+      </g>
+      <g transform="translate(980, 12)">
+        <rect x="0" y="0" width="144" height="36" rx="6" fill="#F0F8F6" stroke="#087F6D" stroke-width="1"/>
+        <text x="72" y="23" class="font-sans" font-size="12" font-weight="700" fill="#087F6D" text-anchor="middle">🖨 批量补打发票凭单</text>
+      </g>
+    </g>
+
+    <!-- Bills Table Area -->
+    <g transform="translate(0, 256)">
+      <rect x="0" y="0" width="1140" height="520" rx="12" fill="#FFFFFF" stroke="#E1EBF0" stroke-width="1" class="shadow-sm"/>
+      
+      <!-- Table Header -->
+      <rect x="16" y="16" width="1108" height="40" rx="6" fill="#EDF6F4"/>
+      <text x="32" y="41" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">账单编号</text>
+      <text x="180" y="41" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">患者信息</text>
+      <text x="310" y="41" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">关联推拿服务 / 主治医师</text>
+      <text x="560" y="41" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">应收金额</text>
+      <text x="650" y="41" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">实收金额</text>
+      <text x="740" y="41" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">支付方式拆分</text>
+      <text x="890" y="41" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">结算时间 / 收银人</text>
+      <text x="1030" y="41" class="font-sans" font-size="12" font-weight="700" fill="#2A5364">状态 / 操作</text>
+
+      <!-- Row 1: 待支付 (超期预警) -->
+      <rect x="16" y="62" width="1108" height="56" rx="8" fill="#FFFDF8" stroke="#FDE68A" stroke-width="1.2"/>
+      <text x="32" y="95" class="font-sans" font-size="12" font-weight="700" fill="#D97706">B20261018-005</text>
+      <text x="180" y="95" class="font-sans" font-size="13" font-weight="700" fill="#13334A">刘浩宇 <tspan font-size="11" font-weight="400" fill="#D97706">(小儿)</tspan></text>
+      <text x="310" y="95" class="font-sans" font-size="12" fill="#28495C">小儿积食调理 + 穴位敷贴 · 王春兰</text>
+      <text x="560" y="95" class="font-sans" font-size="13" font-weight="700" fill="#13334A">¥ 180.00</text>
+      <text x="650" y="95" class="font-sans" font-size="13" font-weight="700" fill="#D97706">待结算</text>
+      <text x="740" y="95" class="font-sans" font-size="12" fill="#7893A2">待确认支付方式</text>
+      <text x="890" y="88" class="font-sans" font-size="12" fill="#2C485A">14:15 开单 (李医生)</text>
+      <text x="890" y="104" class="font-sans" font-size="11" fill="#DC2626">已开单 8 分钟 (限30分)</text>
+      <rect x="1025" y="76" width="76" height="28" rx="6" fill="#087F6D"/>
+      <text x="1063" y="94" class="font-sans" font-size="11" font-weight="700" fill="#FFFFFF" text-anchor="middle">立即收银</text>
+
+      <!-- Row 2: 已支付 -->
+      <line x1="28" y1="126" x2="1112" y2="126" stroke="#EDF2F5" stroke-width="1"/>
+      <text x="32" y="156" class="font-sans" font-size="12" font-weight="700" fill="#087F6D">B20261018-004</text>
+      <text x="180" y="156" class="font-sans" font-size="13" font-weight="700" fill="#13334A">张伟 <tspan font-size="11" font-weight="400" fill="#668292">(成人)</tspan></text>
+      <text x="310" y="156" class="font-sans" font-size="12" fill="#28495C">颈肩综合推拿理疗 · 周明</text>
+      <text x="560" y="156" class="font-sans" font-size="13" font-weight="600" fill="#13334A">¥ 260.00</text>
+      <text x="650" y="156" class="font-sans" font-size="13" font-weight="700" fill="#087F6D">¥ 260.00</text>
+      <text x="740" y="156" class="font-sans" font-size="12" fill="#2E4D60">微信扫码支付 ¥260.00</text>
+      <text x="890" y="150" class="font-sans" font-size="12" fill="#2C485A">13:40:22 / 张前台</text>
+      <text x="890" y="165" class="font-sans" font-size="11" fill="#718E9E">凭证号 #WX98231</text>
+      <rect x="1025" y="142" width="76" height="28" rx="6" fill="#F0F5F8" stroke="#D3E2EA" stroke-width="1"/>
+      <text x="1063" y="160" class="font-sans" font-size="11" font-weight="600" fill="#426071" text-anchor="middle">详情 / 打印</text>
+
+      <!-- Row 3: 已支付 (预存扣款) -->
+      <line x1="28" y1="188" x2="1112" y2="188" stroke="#EDF2F5" stroke-width="1"/>
+      <text x="32" y="218" class="font-sans" font-size="12" font-weight="700" fill="#087F6D">B20261018-003</text>
+      <text x="180" y="218" class="font-sans" font-size="13" font-weight="700" fill="#13334A">王丽华 <tspan font-size="11" font-weight="400" fill="#668292">(成人)</tspan></text>
+      <text x="310" y="218" class="font-sans" font-size="12" fill="#28495C">腰椎间盘突出保守推拿 · 李振华</text>
+      <text x="560" y="218" class="font-sans" font-size="13" font-weight="600" fill="#13334A">¥ 380.00</text>
+      <text x="650" y="218" class="font-sans" font-size="13" font-weight="700" fill="#087F6D">¥ 380.00</text>
+      <text x="740" y="218" class="font-sans" font-size="12" fill="#087F6D">预存划扣 (余¥2,420.00)</text>
+      <text x="890" y="212" class="font-sans" font-size="12" fill="#2C485A">11:55:10 / 李医生</text>
+      <text x="890" y="227" class="font-sans" font-size="11" fill="#718E9E">流水 #DEP-20261018-02</text>
+      <rect x="1025" y="204" width="76" height="28" rx="6" fill="#F0F5F8" stroke="#D3E2EA" stroke-width="1"/>
+      <text x="1063" y="222" class="font-sans" font-size="11" font-weight="600" fill="#426071" text-anchor="middle">详情 / 打印</text>
+    </g>
+  </g>
+
+</svg>
