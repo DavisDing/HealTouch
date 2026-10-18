@@ -56,20 +56,27 @@ public class PatientDao {
   }
 
   public List<Patient> search(String keyword, int page, int pageSize) {
+    return search(keyword, null, page, pageSize);
+  }
+
+  public List<Patient> search(String keyword, PatientType patientType, int page, int pageSize) {
     validatePage(page, pageSize);
     List<Patient> patients = new ArrayList<Patient>();
     String term = searchTerm(keyword);
     int offset = (page - 1) * pageSize;
     String sql =
         baseSql()
-            + " WHERE p.name LIKE ? OR p.id_number LIKE ? OR p.phone LIKE ?"
+            + " WHERE (p.name LIKE ? OR p.id_number LIKE ? OR p.phone LIKE ?)"
+            + (patientType == null ? "" : " AND p.patient_type=?")
             + " ORDER BY p.created_at DESC, p.id DESC LIMIT ? OFFSET ?";
 
     try (Connection connection = dataSource.getConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
       bindSearchTerm(statement, term);
-      statement.setInt(4, pageSize);
-      statement.setInt(5, offset);
+      int next = 4;
+      if (patientType != null) statement.setString(next++, patientType.name());
+      statement.setInt(next++, pageSize);
+      statement.setInt(next, offset);
       try (ResultSet resultSet = statement.executeQuery()) {
         while (resultSet.next()) {
           patients.add(map(resultSet));
@@ -82,12 +89,18 @@ public class PatientDao {
   }
 
   public long countSearch(String keyword) {
+    return countSearch(keyword, null);
+  }
+
+  public long countSearch(String keyword, PatientType patientType) {
     String sql =
         "SELECT COUNT(*) FROM patient p"
-            + " WHERE p.name LIKE ? OR p.id_number LIKE ? OR p.phone LIKE ?";
+            + " WHERE (p.name LIKE ? OR p.id_number LIKE ? OR p.phone LIKE ?)"
+            + (patientType == null ? "" : " AND p.patient_type=?");
     try (Connection connection = dataSource.getConnection();
         PreparedStatement statement = connection.prepareStatement(sql)) {
       bindSearchTerm(statement, searchTerm(keyword));
+      if (patientType != null) statement.setString(4, patientType.name());
       try (ResultSet resultSet = statement.executeQuery()) {
         if (!resultSet.next()) {
           throw new SQLException("无法统计患者数量");

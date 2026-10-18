@@ -3,6 +3,7 @@ package com.healtouch.ui;
 import com.healtouch.app.AppServices;
 import com.healtouch.model.*;
 import com.healtouch.service.UserService;
+import com.healtouch.service.Authorization;
 import com.healtouch.util.Money;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -52,9 +53,9 @@ public class TreatmentPage {
 
     patient.valueProperty().addListener((obs, o, p) -> {
       if (p != null) {
-        String typeStr = p.isChild ? "小儿患者" : "成人患者";
-        String extra = p.isChild ? (" · 监护人：" + p.guardianName + " (" + p.guardianPhone + ")") : "";
-        patientNotice.setText("就诊患者：" + p.name + " (" + typeStr + ")" + extra + " · 当前预存可用金：" + Money.format(p.depositBalanceCents));
+        String typeStr = p.isChild() ? "小儿患者" : "成人患者";
+        String extra = p.isChild() ? (" · 监护人：" + p.guardianName + " (" + p.guardianPhone + ")") : "";
+        patientNotice.setText("就诊患者：" + p.name + " (" + typeStr + ")" + extra + " · 当前预存可用金：" + Money.format(p.balanceCents));
         patientNotice.setStyle("-fx-text-fill: #087F6D; -fx-font-weight: bold; -fx-font-size: 12px;");
       } else {
         patientNotice.setText("请选择就诊患者");
@@ -115,7 +116,8 @@ public class TreatmentPage {
     totalBar.setAlignment(Pos.CENTER_RIGHT);
     totalBar.setStyle("-fx-padding: 8 16; -fx-background-color: #F0F8F6; -fx-background-radius: 8;");
 
-    Button save = Ui.primaryButton("生成账单并即时收费 (严禁欠费)");
+    boolean canCharge = can(Permission.BILL_CHARGE);
+    Button save = Ui.primaryButton(canCharge ? "生成账单并即时收费 (严禁欠费)" : "生成待收费账单");
     save.setStyle("-fx-font-size: 14px; -fx-padding: 10 24;");
     save.setOnAction(e -> {
       try {
@@ -132,7 +134,12 @@ public class TreatmentPage {
             note.getText(),
             new ArrayList<TreatmentLine>(lines));
 
-        showCharge(id, sum(), patient.getValue());
+        long receivable = services.billing.receivable(session, id);
+        if (canCharge) {
+          showCharge(id, receivable, patient.getValue());
+        } else {
+          Ui.info("待收费账单已生成，请交由前台完成全额收款。");
+        }
         lines.clear();
         updateTotal();
         note.clear();
@@ -268,6 +275,15 @@ public class TreatmentPage {
           }
         });
     dialog.showAndWait();
+  }
+
+  private boolean can(Permission permission) {
+    try {
+      Authorization.require(session, permission);
+      return true;
+    } catch (SecurityException e) {
+      return false;
+    }
   }
 
   private TableColumn<PaymentLine, String> colPay(

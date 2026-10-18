@@ -3,7 +3,9 @@ package com.healtouch.ui;
 import com.healtouch.app.AppServices;
 import com.healtouch.model.Patient;
 import com.healtouch.model.PaymentMethod;
+import com.healtouch.model.Permission;
 import com.healtouch.model.UserSession;
+import com.healtouch.service.Authorization;
 import com.healtouch.service.DepositService;
 import com.healtouch.util.Money;
 import javafx.beans.property.SimpleStringProperty;
@@ -47,6 +49,7 @@ public class DepositPage {
     method.setValue(PaymentMethod.WECHAT);
 
     Button recharge = Ui.primaryButton("＋ 立即充值入账");
+    recharge.setDisable(!can(Permission.DEPOSIT_RECHARGE));
     recharge.setOnAction(event -> {
       try {
         if (patient.getValue() == null) throw new IllegalArgumentException("请选择患者");
@@ -58,6 +61,7 @@ public class DepositPage {
     });
 
     Button refund = Ui.dangerButton("申请余额退款");
+    refund.setDisable(!can(Permission.DEPOSIT_REFUND));
     refund.setOnAction(event -> {
       try {
         if (patient.getValue() == null) throw new IllegalArgumentException("请选择患者");
@@ -136,5 +140,14 @@ public class DepositPage {
         history.setItems(FXCollections.observableArrayList(services.deposits.history(session, patient.id)));
       }
     } catch (Exception exception) { Ui.error(exception); }
+  }
+
+  private boolean can(Permission permission) {
+    try {
+      Authorization.require(session, permission);
+      return true;
+    } catch (SecurityException e) {
+      return false;
+    }
   }
 }

@@ -8,3 +8,11 @@
 /backups/
 *.log
 .DS_Store
+
+# Local SVG rendering helpers and native test outputs
+/svg2png
+/test_attr
+/test_svg_render
+/test_*.m
+/test_*.py
+/test_*.png

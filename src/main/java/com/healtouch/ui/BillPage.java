@@ -3,8 +3,10 @@ package com.healtouch.ui;
 import com.healtouch.app.AppServices;
 import com.healtouch.model.BillStatus;
 import com.healtouch.model.BillSummary;
+import com.healtouch.model.Permission;
 import com.healtouch.model.UserSession;
 import com.healtouch.service.DepositService;
+import com.healtouch.service.Authorization;
 import com.healtouch.util.Money;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -44,9 +46,11 @@ public class BillPage {
     prepaidHistory.setOnAction(e -> showPrepaidHistory());
 
     Button voidBill = Ui.dangerButton("作废超期/待收费单");
+    voidBill.setDisable(!can(Permission.TREATMENT_CREATE));
     voidBill.setOnAction(e -> voidBill());
 
     Button refund = new Button("申请冲正退款");
+    refund.setDisable(!can(Permission.BILL_REFUND));
     refund.setOnAction(e -> refund());
 
     HBox tb = Ui.toolbar(keyword, status, search, refresh, Ui.spacer(), prepaidHistory, voidBill, refund);
@@ -198,6 +202,15 @@ public class BillPage {
       case PARTIALLY_REFUNDED: return "部分退款";
       case REFUNDED: return "已退款";
       default: return "已作废";
+    }
+  }
+
+  private boolean can(Permission permission) {
+    try {
+      Authorization.require(session, permission);
+      return true;
+    } catch (SecurityException e) {
+      return false;
     }
   }
 }

@@ -153,6 +153,20 @@ public class BillingService {
         });
   }
 
+  public long receivable(UserSession actor, long billId) {
+    Authorization.require(actor, Permission.PATIENT_VIEW);
+    try (Connection c = dataSource.getConnection();
+        PreparedStatement ps = c.prepareStatement("SELECT receivable_cents FROM bill WHERE id=?")) {
+      ps.setLong(1, billId);
+      try (ResultSet rs = ps.executeQuery()) {
+        if (!rs.next()) throw new IllegalArgumentException("账单不存在");
+        return rs.getLong(1);
+      }
+    } catch (SQLException e) {
+      throw new IllegalStateException("查询账单应收金额失败", e);
+    }
+  }
+
   public void voidPending(UserSession actor, long billId, String reason) {
     Authorization.require(actor, Permission.TREATMENT_CREATE);
     Checks.required(reason, "作废原因");

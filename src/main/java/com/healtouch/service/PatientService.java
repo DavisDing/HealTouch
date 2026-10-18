@@ -37,13 +37,18 @@ public class PatientService {
   }
 
   public PageResult<Patient> searchPage(UserSession actor, String keyword, int page, int pageSize) {
+    return searchPage(actor, keyword, null, page, pageSize);
+  }
+
+  public PageResult<Patient> searchPage(
+      UserSession actor, String keyword, PatientType patientType, int page, int pageSize) {
     Authorization.require(actor, Permission.PATIENT_VIEW);
     if (page < 1 || pageSize < 1) throw new IllegalArgumentException("分页参数不正确");
-    long total = patientDao.countSearch(keyword);
+    long total = patientDao.countSearch(keyword, patientType);
     int totalPages = (int) Math.max(1L, (total + pageSize - 1L) / pageSize);
     int actualPage = Math.min(page, totalPages);
     return new PageResult<Patient>(
-        patientDao.search(keyword, actualPage, pageSize), total, actualPage, pageSize);
+        patientDao.search(keyword, patientType, actualPage, pageSize), total, actualPage, pageSize);
   }
 
   public long create(UserSession actor, Patient p) {

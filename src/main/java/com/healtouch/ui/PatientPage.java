@@ -1,14 +1,20 @@
 package com.healtouch.ui;
 
 import com.healtouch.app.AppServices;
+import com.healtouch.model.Gender;
+import com.healtouch.model.PageResult;
 import com.healtouch.model.Patient;
+import com.healtouch.model.PatientType;
 import com.healtouch.model.Permission;
 import com.healtouch.model.UserSession;
 import com.healtouch.service.Authorization;
 import com.healtouch.util.Money;
+import java.time.LocalDate;
+import java.util.function.Function;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
-import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
@@ -22,62 +28,78 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
-import java.time.LocalDate;
-import java.util.List;
-
 public class PatientPage {
+  private static final int PAGE_SIZE = 50;
+  private static final String[] ID_TYPES = {"身份证", "户口本", "出生证明", "护照", "其他"};
+
   private final AppServices services;
   private final UserSession session;
-  private final boolean autoCreate;
+  private final boolean openCreateOnLoad;
   private final TableView<Patient> table = new TableView<Patient>();
-  private final TextField searchField = new TextField();
+  private final TextField search = new TextField();
   private final ComboBox<String> typeFilter = new ComboBox<String>();
+  private final Label pageInfo = new Label();
+  private final Button previousPage = new Button("上一页");
+  private final Button nextPage = new Button("下一页");
+  private int currentPage = 1;
 
   public PatientPage(AppServices services, UserSession session) {
     this(services, session, false);
   }
 
-  public PatientPage(AppServices services, UserSession session, boolean autoCreate) {
+  public PatientPage(AppServices services, UserSession session, boolean openCreateOnLoad) {
     this.services = services;
     this.session = session;
-    this.autoCreate = autoCreate;
+    this.openCreateOnLoad = openCreateOnLoad;
   }
 
   public Parent node() {
-    searchField.setPromptText("输入患者姓名 / 手机号 / 身份证号搜索...");
-    searchField.setPrefWidth(300);
-    searchField.textProperty().addListener((obs, o, n) -> search());
+    search.setPromptText("姓名、证件号码或手机号");
+    search.setPrefWidth(280);
+    Button query = Ui.primaryButton("查询");
+    query.setOnAction(event -> searchFromFirstPage());
+    search.setOnKeyPressed(event -> {
+      if (event.getCode() == KeyCode.ENTER) searchFromFirstPage();
+    });
 
     typeFilter.setItems(FXCollections.observableArrayList("全部类型", "成人", "小儿"));
     typeFilter.setValue("全部类型");
-    typeFilter.setOnAction(e -> search());
+    typeFilter.setOnAction(event -> searchFromFirstPage());
 
+    final boolean canEdit = can(Permission.PATIENT_EDIT);
     Button create = Ui.primaryButton("＋ 创建新档案");
-    create.setOnAction(e -> edit(new Patient()));
-    create.setVisible(can(Permission.PATIENT_CREATE));
+    create.setOnAction(event -> openForm(null));
+    create.setVisible(canEdit);
+    create.setManaged(create.isVisible());
 
-    Button refreshBtn = new Button("刷新");
-    refreshBtn.setOnAction(e -> search());
+    previousPage.setOnAction(event -> {
+      if (currentPage > 1) {
+        currentPage--;
+        load();
+      }
+    });
+    nextPage.setOnAction(event -> {
+      currentPage++;
+      load();
+    });
 
-    HBox tb = Ui.toolbar(new Label("检索患者："), searchField, typeFilter, refreshBtn, Ui.spacer(), create);
+    HBox pagination = new HBox(8, previousPage, pageInfo, nextPage);
+    pagination.setAlignment(Pos.CENTER_LEFT);
+    HBox toolbar = Ui.toolbar(new Label("检索患者："), search, typeFilter, query, Ui.spacer(), create);
 
-    TableColumn<Patient, String> codeCol = new TableColumn<Patient, String>("档案编号");
-    codeCol.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().patientCode));
-    codeCol.setPrefWidth(110);
-
-    TableColumn<Patient, String> nameCol = new TableColumn<Patient, String>("姓名");
-    nameCol.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().name));
-    nameCol.setPrefWidth(100);
-
-    TableColumn<Patient, String> typeCol = new TableColumn<Patient, String>("患者类型");
-    typeCol.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().isChild ? "小儿" : "成人"));
-    typeCol.setPrefWidth(90);
-    typeCol.setCellFactory(col -> new TableCell<Patient, String>() {
+    TableColumn<Patient, String> code = column("档案编号", patient -> patient.patientCode);
+    code.setPrefWidth(110);
+    TableColumn<Patient, String> name = column("姓名", patient -> patient.name);
+    name.setPrefWidth(100);
+    TableColumn<Patient, String> type = column("患者类型", patient -> patient.isChild() ? "小儿" : "成人");
+    type.setPrefWidth(90);
+    type.setCellFactory(col -> new TableCell<Patient, String>() {
       @Override
       protected void updateItem(String item, boolean empty) {
         super.updateItem(item, empty);
@@ -94,188 +116,254 @@ public class PatientPage {
       }
     });
 
-    TableColumn<Patient, String> genderCol = new TableColumn<Patient, String>("性别");
-    genderCol.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().gender == null ? "-" : c.getValue().gender));
-    genderCol.setPrefWidth(60);
+    TableColumn<Patient, String> gender = column("性别", patient -> patient.gender == null ? "—" : patient.gender.getLabel());
+    gender.setPrefWidth(60);
+    TableColumn<Patient, String> phone = column("联系电话", patient -> patient.phone);
+    phone.setPrefWidth(125);
+    TableColumn<Patient, String> balance = column("预存可用余额", patient -> Money.format(patient.balanceCents));
+    balance.setPrefWidth(130);
+    balance.setStyle("-fx-font-weight: bold; -fx-text-fill: #087F6D;");
+    TableColumn<Patient, String> guardian = column(
+        "法定监护人 (小儿专填)",
+        patient -> patient.isChild()
+            ? patient.guardianName + " (" + patient.guardianRelationship + " - " + patient.guardianPhone + ")"
+            : "—");
+    guardian.setPrefWidth(220);
 
-    TableColumn<Patient, String> phoneCol = new TableColumn<Patient, String>("联系电话");
-    phoneCol.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().phone));
-    phoneCol.setPrefWidth(125);
-
-    TableColumn<Patient, String> balanceCol = new TableColumn<Patient, String>("预存可用余额");
-    balanceCol.setCellValueFactory(c -> new SimpleStringProperty(Money.format(c.getValue().depositBalanceCents)));
-    balanceCol.setPrefWidth(130);
-    balanceCol.setStyle("-fx-font-weight: bold; -fx-text-fill: #087F6D;");
-
-    TableColumn<Patient, String> guardianCol = new TableColumn<Patient, String>("法定监护人 (小儿专填)");
-    guardianCol.setCellValueFactory(c -> new SimpleStringProperty(
-        c.getValue().isChild ? (c.getValue().guardianName + " (" + (c.getValue().guardianRelation == null ? "" : c.getValue().guardianRelation) + " - " + c.getValue().guardianPhone + ")") : "-"));
-    guardianCol.setPrefWidth(220);
-
-    TableColumn<Patient, String> actionCol = new TableColumn<Patient, String>("操作");
-    actionCol.setPrefWidth(150);
-    actionCol.setCellFactory(c -> new TableCell<Patient, String>() {
-      private final Button editBtn = new Button("编辑档案");
-      private final Button viewBtn = new Button("查看详情");
-      private final HBox box = new HBox(6, viewBtn, editBtn);
+    TableColumn<Patient, String> actions = column("操作", patient -> "");
+    actions.setPrefWidth(150);
+    actions.setCellFactory(col -> new TableCell<Patient, String>() {
+      private final Button view = new Button("查看详情");
+      private final Button edit = new Button("编辑档案");
+      private final HBox buttons = new HBox(6, view, edit);
       {
-        editBtn.setStyle("-fx-font-size: 11px; -fx-padding: 4 8;");
-        viewBtn.setStyle("-fx-font-size: 11px; -fx-padding: 4 8; -fx-text-fill: #087F6D;");
-        editBtn.setOnAction(e -> edit(getTableView().getItems().get(getIndex())));
-        viewBtn.setOnAction(e -> view(getTableView().getItems().get(getIndex())));
+        view.setStyle("-fx-font-size: 11px; -fx-padding: 4 8; -fx-text-fill: #087F6D;");
+        edit.setStyle("-fx-font-size: 11px; -fx-padding: 4 8;");
+        edit.setDisable(!canEdit);
+        view.setOnAction(event -> PatientPage.this.view(getTableView().getItems().get(getIndex())));
+        edit.setOnAction(event -> PatientPage.this.openForm(getTableView().getItems().get(getIndex())));
       }
       @Override
       protected void updateItem(String item, boolean empty) {
         super.updateItem(item, empty);
-        setGraphic(empty ? null : box);
+        setGraphic(empty ? null : buttons);
       }
     });
 
-    table.getColumns().addAll(codeCol, nameCol, typeCol, genderCol, phoneCol, balanceCol, guardianCol, actionCol);
+    table.getColumns().addAll(code, name, type, gender, phone, balance, guardian, actions);
+    table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
     VBox.setVgrow(table, Priority.ALWAYS);
 
-    search();
-    if (autoCreate && can(Permission.PATIENT_CREATE)) edit(new Patient());
-    return Ui.page("患者档案管理", "规范建立健康档案 · 支持成人与小儿患者特殊监护人必填核验", tb, table);
+    VBox page = Ui.page("患者档案管理", "规范建立健康档案 · 支持成人与小儿患者特殊监护人必填核验", toolbar, table, pagination);
+    load();
+    if (openCreateOnLoad && canEdit) Platform.runLater(() -> openForm(null));
+    return page;
   }
 
-  private void search() {
+  private TableColumn<Patient, String> column(String label, Function<Patient, String> getter) {
+    TableColumn<Patient, String> column = new TableColumn<Patient, String>(label);
+    column.setCellValueFactory(cell -> new SimpleStringProperty(getter.apply(cell.getValue())));
+    return column;
+  }
+
+  private void searchFromFirstPage() {
+    currentPage = 1;
+    load();
+  }
+
+  private void load() {
     try {
-      List<Patient> list = services.patients.search(session, searchField.getText(), 0, 100);
-      String filter = typeFilter.getValue();
-      if ("成人".equals(filter)) {
-        list.removeIf(p -> p.isChild);
-      } else if ("小儿".equals(filter)) {
-        list.removeIf(p -> !p.isChild);
-      }
-      table.setItems(FXCollections.observableArrayList(list));
-    } catch (Exception e) {
-      Ui.error(e);
+      PatientType filter = null;
+      if ("成人".equals(typeFilter.getValue())) filter = PatientType.ADULT;
+      if ("小儿".equals(typeFilter.getValue())) filter = PatientType.CHILD;
+      PageResult<Patient> result = services.patients.searchPage(session, search.getText(), filter, currentPage, PAGE_SIZE);
+      currentPage = result.getPage();
+      table.setItems(FXCollections.observableArrayList(result.getItems()));
+      previousPage.setDisable(!result.hasPreviousPage());
+      nextPage.setDisable(!result.hasNextPage());
+      pageInfo.setText("第 " + result.getPage() + " / " + result.getTotalPages() + " 页，共 " + result.getTotalItems() + " 位患者");
+    } catch (Exception exception) {
+      Ui.error(exception);
     }
   }
 
-  private void view(Patient p) {
-    Alert a = new Alert(Alert.AlertType.INFORMATION);
-    a.setTitle("患者档案详情 - " + p.name);
-    a.setHeaderText(p.name + " (" + (p.isChild ? "小儿患者" : "成人患者") + ") · 档案号: " + p.patientCode);
+  private void view(Patient patient) {
+    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+    alert.setTitle("患者档案详情 - " + patient.name);
+    alert.setHeaderText(patient.name + " (" + (patient.isChild() ? "小儿患者" : "成人患者") + ") · 档案号: " + patient.patientCode);
 
-    StringBuilder sb = new StringBuilder();
-    sb.append("性别: ").append(p.gender == null ? "未填" : p.gender).append("\n");
-    sb.append("出生日期: ").append(p.birthDate == null ? "未填" : p.birthDate.toString()).append("\n");
-    sb.append("联系电话: ").append(p.phone).append("\n");
-    sb.append("证件号码: ").append(p.idCard == null || p.idCard.isEmpty() ? "未登记" : p.idCard).append("\n");
-    sb.append("预存可用金: ").append(Money.format(p.depositBalanceCents)).append("\n\n");
-
-    if (p.isChild) {
-      sb.append("【法定监护人信息】\n");
-      sb.append("监护人姓名: ").append(p.guardianName).append("\n");
-      sb.append("亲属关系: ").append(p.guardianRelation).append("\n");
-      sb.append("监护人电话: ").append(p.guardianPhone).append("\n\n");
+    StringBuilder text = new StringBuilder();
+    text.append("性别: ").append(patient.gender == null ? "未填" : patient.gender.getLabel()).append("\n");
+    text.append("出生日期: ").append(patient.birthDate == null ? "未填" : patient.birthDate).append("\n");
+    text.append("联系电话: ").append(patient.phone).append("\n");
+    text.append("证件号码: ").append(patient.idNumber == null ? "未登记" : patient.idNumber).append("\n");
+    text.append("预存可用金: ").append(Money.format(patient.balanceCents)).append("\n\n");
+    if (patient.isChild()) {
+      text.append("【法定监护人信息】\n");
+      text.append("监护人姓名: ").append(patient.guardianName).append("\n");
+      text.append("亲属关系: ").append(patient.guardianRelationship).append("\n");
+      text.append("监护人电话: ").append(patient.guardianPhone).append("\n\n");
     }
-
-    sb.append("既往调理/病史: ").append(p.medicalHistory == null || p.medicalHistory.isEmpty() ? "无" : p.medicalHistory).append("\n");
-    sb.append("过敏反应史: ").append(p.allergies == null || p.allergies.isEmpty() ? "无" : p.allergies).append("\n");
-    sb.append("家庭住址: ").append(p.address == null || p.address.isEmpty() ? "未填" : p.address);
-
-    a.setContentText(sb.toString());
-    a.showAndWait();
+    text.append("既往调理/病史: ").append(emptyAsDash(patient.medicalHistory)).append("\n");
+    text.append("药物过敏史: ").append(emptyAsDash(patient.allergies)).append("\n");
+    text.append("家庭住址: ").append(emptyAsDash(patient.address));
+    alert.setContentText(text.toString());
+    alert.showAndWait();
   }
 
-  private void edit(Patient p) {
+  private String emptyAsDash(String value) {
+    return value == null || value.trim().isEmpty() ? "无" : value;
+  }
+
+  private void openForm(Patient existing) {
     Dialog<ButtonType> dialog = new Dialog<ButtonType>();
-    dialog.setTitle(p.id == null ? "新建患者档案" : "编辑档案 - " + p.name);
-    dialog.setHeaderText("填写门诊患者详细信息（带 * 为必填项）");
-
-    TextField name = new TextField(p.name == null ? "" : p.name);
-    ComboBox<String> type = new ComboBox<String>(FXCollections.observableArrayList("成人", "小儿"));
-    type.setValue(p.isChild ? "小儿" : "成人");
-    ComboBox<String> gender = new ComboBox<String>(FXCollections.observableArrayList("男", "女"));
-    gender.setValue(p.gender == null ? "男" : p.gender);
-    DatePicker birthDate = new DatePicker(p.birthDate == null ? LocalDate.now().minusYears(25) : p.birthDate);
-    TextField phone = new TextField(p.phone == null ? "" : p.phone);
-    TextField idCard = new TextField(p.idCard == null ? "" : p.idCard);
-
-    // Guardian fields
-    TextField gName = new TextField(p.guardianName == null ? "" : p.guardianName);
-    TextField gRel = new TextField(p.guardianRelation == null ? "" : p.guardianRelation);
-    TextField gPhone = new TextField(p.guardianPhone == null ? "" : p.guardianPhone);
-
-    TextArea medicalHistory = new TextArea(p.medicalHistory == null ? "" : p.medicalHistory);
-    medicalHistory.setPrefRowCount(2);
-    TextArea allergies = new TextArea(p.allergies == null ? "" : p.allergies);
-    allergies.setPrefRowCount(2);
-    TextField address = new TextField(p.address == null ? "" : p.address);
-
-    Label gNameLbl = new Label("监护人姓名 *:");
-    Label gRelLbl = new Label("监护人关系 *:");
-    Label gPhoneLbl = new Label("监护人电话 *:");
-
-    VBox guardianBox = new VBox(8);
-    guardianBox.setPadding(new Insets(10));
-    guardianBox.setStyle("-fx-background-color: #FEF9F3; -fx-border-color: #FDE68A; -fx-border-radius: 8; -fx-background-radius: 8;");
-    Label guardianNotice = new Label("小儿患者法定监护人信息（必填）");
-    guardianNotice.setStyle("-fx-text-fill: #B45309; -fx-font-weight: bold; -fx-font-size: 11px;");
-    GridPane gg = new GridPane();
-    gg.setHgap(8);
-    gg.setVgap(8);
-    gg.add(gNameLbl, 0, 0); gg.add(gName, 1, 0);
-    gg.add(gRelLbl, 2, 0); gg.add(gRel, 3, 0);
-    gg.add(gPhoneLbl, 0, 1); gg.add(gPhone, 1, 1);
-    guardianBox.getChildren().addAll(guardianNotice, gg);
-
-    Runnable toggleChild = () -> {
-      boolean child = "小儿".equals(type.getValue());
-      guardianBox.setVisible(child);
-      guardianBox.setManaged(child);
-    };
-    type.setOnAction(e -> toggleChild.run());
-    toggleChild.run();
-
-    GridPane grid = new GridPane();
-    grid.setHgap(10);
-    grid.setVgap(10);
-    grid.setPadding(new Insets(16));
-    grid.add(new Label("患者姓名 *:"), 0, 0); grid.add(name, 1, 0);
-    grid.add(new Label("患者类型 *:"), 2, 0); grid.add(type, 3, 0);
-    grid.add(new Label("性别:"), 0, 1); grid.add(gender, 1, 1);
-    grid.add(new Label("出生日期:"), 2, 1); grid.add(birthDate, 3, 1);
-    grid.add(new Label("联系电话 *:"), 0, 2); grid.add(phone, 1, 2);
-    grid.add(new Label("身份证件号:"), 2, 2); grid.add(idCard, 3, 2);
-
-    grid.add(guardianBox, 0, 3, 4, 1);
-
-    grid.add(new Label("既往病史:"), 0, 4); grid.add(medicalHistory, 1, 4, 3, 1);
-    grid.add(new Label("药物过敏史:"), 0, 5); grid.add(allergies, 1, 5, 3, 1);
-    grid.add(new Label("家庭住址:"), 0, 6); grid.add(address, 1, 6, 3, 1);
-
-    dialog.getDialogPane().setContent(grid);
+    dialog.setTitle(existing == null ? "创建患者档案" : "编辑患者档案");
+    dialog.setHeaderText("带 * 的内容为必填项；患者类型会按出生日期自动判断。");
     dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-    dialog.showAndWait().ifPresent(btn -> {
-      if (btn != ButtonType.OK) return;
-      try {
-        p.name = name.getText().trim();
-        p.isChild = "小儿".equals(type.getValue());
-        p.gender = gender.getValue();
-        p.birthDate = birthDate.getValue();
-        p.phone = phone.getText().trim();
-        p.idCard = idCard.getText().trim();
-        p.guardianName = gName.getText().trim();
-        p.guardianRelation = gRel.getText().trim();
-        p.guardianPhone = gPhone.getText().trim();
-        p.medicalHistory = medicalHistory.getText().trim();
-        p.allergies = allergies.getText().trim();
-        p.address = address.getText().trim();
-        if (p.id == null) services.patients.create(session, p);
-        else services.patients.update(session, p);
-        search();
-      } catch (Exception e) {
-        Ui.error(e);
-      }
-    });
+
+    GridPane form = new GridPane();
+    form.setHgap(12);
+    form.setVgap(10);
+    ComboBox<Gender> gender = new ComboBox<Gender>(FXCollections.observableArrayList(Gender.values()));
+    gender.setPromptText("请选择性别");
+    ComboBox<String> idType = new ComboBox<String>(FXCollections.observableArrayList(ID_TYPES));
+    idType.setPromptText("请选择证件类型");
+    TextField name = new TextField();
+    TextField idNumber = new TextField();
+    DatePicker birth = new DatePicker();
+    birth.setEditable(false);
+    Label patientType = new Label("请选择出生日期");
+    patientType.setStyle("-fx-font-weight: bold; -fx-text-fill: #087F6D;");
+    TextField phone = new TextField();
+    TextField address = new TextField();
+    TextField guardian = new TextField();
+    TextField relationship = new TextField();
+    TextField guardianPhone = new TextField();
+    TextArea allergies = new TextArea();
+    allergies.setPrefRowCount(2);
+    TextArea medicalHistory = new TextArea();
+    medicalHistory.setPrefRowCount(2);
+    TextArea remark = new TextArea();
+    remark.setPrefRowCount(2);
+
+    form.addRow(0, new Label("患者类型"), patientType);
+    form.addRow(1, new Label("姓名*"), name);
+    form.addRow(2, new Label("性别*"), gender);
+    form.addRow(3, new Label("证件类型*"), idType);
+    form.addRow(4, new Label("证件号码*"), idNumber);
+    form.addRow(5, new Label("出生日期*"), birth);
+    form.addRow(6, new Label("联系电话*"), phone);
+    form.addRow(7, new Label("联系地址"), address);
+    form.addRow(8, new Label("监护人姓名（未成年人必填）"), guardian);
+    form.addRow(9, new Label("关系（未成年人必填）"), relationship);
+    form.addRow(10, new Label("监护人电话（未成年人必填）"), guardianPhone);
+    form.addRow(11, new Label("药物过敏史"), allergies);
+    form.addRow(12, new Label("既往病史"), medicalHistory);
+    form.addRow(13, new Label("备注"), remark);
+
+    birth.valueProperty().addListener((observable, oldDate, newDate) -> updatePatientType(patientType, newDate));
+    if (existing != null) populateForm(existing, name, gender, idType, idNumber, birth, phone, address,
+        guardian, relationship, guardianPhone, allergies, medicalHistory, remark);
+    updatePatientType(patientType, birth.getValue());
+
+    dialog.getDialogPane().setContent(form);
+    Button ok = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+    ok.addEventFilter(
+        javafx.event.ActionEvent.ACTION,
+        event -> {
+          try {
+            Patient patient = existing == null ? new Patient() : copyOf(existing);
+            if (existing != null) patient.id = existing.id;
+            patient.name = name.getText();
+            patient.gender = gender.getValue();
+            patient.idType = idType.getValue();
+            patient.idNumber = idNumber.getText();
+            patient.birthDate = birth.getValue();
+            patient.phone = phone.getText();
+            patient.address = address.getText();
+            patient.guardianName = guardian.getText();
+            patient.guardianRelationship = relationship.getText();
+            patient.guardianPhone = guardianPhone.getText();
+            patient.allergies = allergies.getText();
+            patient.medicalHistory = medicalHistory.getText();
+            patient.remark = remark.getText();
+            if (existing == null) services.patients.create(session, patient);
+            else services.patients.update(session, patient);
+            load();
+          } catch (Exception exception) {
+            event.consume();
+            Ui.error(exception);
+          }
+        });
+    dialog.showAndWait();
   }
 
-  private boolean can(Permission p) {
-    try { Authorization.require(session, p); return true; }
-    catch (SecurityException e) { return false; }
+  private void updatePatientType(Label type, LocalDate birthDate) {
+    PatientType patientType = PatientType.fromBirthDate(birthDate);
+    type.setText(patientType == null ? "请选择出生日期" : patientType.getLabel() + "（满 18 周岁为成年人）");
+  }
+
+  private void populateForm(
+      Patient patient,
+      TextField name,
+      ComboBox<Gender> gender,
+      ComboBox<String> idType,
+      TextField idNumber,
+      DatePicker birth,
+      TextField phone,
+      TextField address,
+      TextField guardian,
+      TextField relationship,
+      TextField guardianPhone,
+      TextArea allergies,
+      TextArea medicalHistory,
+      TextArea remark) {
+    name.setText(patient.name);
+    gender.setValue(patient.gender);
+    if (patient.idType != null && !idType.getItems().contains(patient.idType)) {
+      idType.getItems().add(patient.idType);
+    }
+    idType.setValue(patient.idType);
+    idNumber.setText(patient.idNumber);
+    birth.setValue(patient.birthDate);
+    phone.setText(patient.phone);
+    address.setText(patient.address);
+    guardian.setText(patient.guardianName);
+    relationship.setText(patient.guardianRelationship);
+    guardianPhone.setText(patient.guardianPhone);
+    allergies.setText(patient.allergies);
+    medicalHistory.setText(patient.medicalHistory);
+    remark.setText(patient.remark);
+  }
+
+  private Patient copyOf(Patient source) {
+    Patient copy = new Patient();
+    copy.id = source.id;
+    copy.patientCode = source.patientCode;
+    copy.patientType = source.patientType;
+    copy.name = source.name;
+    copy.gender = source.gender;
+    copy.idType = source.idType;
+    copy.idNumber = source.idNumber;
+    copy.birthDate = source.birthDate;
+    copy.phone = source.phone;
+    copy.address = source.address;
+    copy.guardianName = source.guardianName;
+    copy.guardianRelationship = source.guardianRelationship;
+    copy.guardianPhone = source.guardianPhone;
+    copy.allergies = source.allergies;
+    copy.medicalHistory = source.medicalHistory;
+    copy.remark = source.remark;
+    copy.balanceCents = source.balanceCents;
+    return copy;
+  }
+
+  private boolean can(Permission permission) {
+    try {
+      Authorization.require(session, permission);
+      return true;
+    } catch (SecurityException e) {
+      return false;
+    }
   }
 }
