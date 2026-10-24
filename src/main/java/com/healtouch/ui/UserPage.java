@@ -32,7 +32,7 @@ public class UserPage {
           try {
             UserService.Staff s = table.getSelectionModel().getSelectedItem();
             if (s == null) throw new IllegalArgumentException("请选择用户");
-            services.users.setActive(session, s.id, !s.active);
+            DbWork.write(services.users::setActive, session, s.id, !s.active);
             load();
           } catch (Exception ex) {
             Ui.error(ex);
@@ -61,7 +61,7 @@ public class UserPage {
 
   private void load() {
     try {
-      table.setItems(FXCollections.observableArrayList(services.users.listAll()));
+      table.setItems(FXCollections.observableArrayList(DbWork.read(services.users::listAll, session)));
     } catch (Exception e) {
       Ui.error(e);
     }
@@ -105,7 +105,7 @@ public class UserPage {
           try {
             EnumSet<RoleCode> set = EnumSet.noneOf(RoleCode.class);
             set.addAll(roles.getSelectionModel().getSelectedItems());
-            services.users.create(
+            DbWork.read(services.users::create,
                 session,
                 name.getText(),
                 account.getText(),
@@ -119,7 +119,7 @@ public class UserPage {
             Ui.error(exception);
           }
         });
-    dialog.showAndWait();
+    Ui.show(dialog);
   }
 
 }

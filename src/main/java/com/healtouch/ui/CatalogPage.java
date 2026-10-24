@@ -36,7 +36,7 @@ public class CatalogPage {
           try {
             TreatmentProject p = table.getSelectionModel().getSelectedItem();
             if (p == null) throw new IllegalArgumentException("请选择需要更改状态的项目");
-            services.catalog.setProjectActive(session, p.id, !p.active);
+            DbWork.write(services.catalog::setProjectActive, session, p.id, !p.active);
             load();
           } catch (Exception x) {
             Ui.error(x);
@@ -104,7 +104,7 @@ public class CatalogPage {
 
   private void load() {
     try {
-      table.setItems(FXCollections.observableArrayList(services.catalog.projects(false)));
+      table.setItems(FXCollections.observableArrayList(DbWork.read(services.catalog::projects, session, false)));
     } catch (Exception e) {
       Ui.error(e);
     }
@@ -122,7 +122,7 @@ public class CatalogPage {
         b -> {
           if (b == ButtonType.OK) {
             try {
-              services.catalog.addCategory(session, name.getText().trim(), code.getText().trim(), null, 100);
+              DbWork.read(services.catalog::addCategory, session, name.getText().trim(), code.getText().trim(), null, 100);
               Ui.info("分类创建成功！");
             } catch (Exception e) {
               Ui.error(e);
@@ -131,7 +131,7 @@ public class CatalogPage {
           }
           return b;
         });
-    d.showAndWait();
+    Ui.show(d);
   }
 
   private void addProject() {
@@ -141,8 +141,9 @@ public class CatalogPage {
     TextField name = new TextField();
     TextField code = new TextField();
     ComboBox<CatalogService.Category> category = new ComboBox<CatalogService.Category>();
-    category.setItems(FXCollections.observableArrayList(services.catalog.categories(true)));
+    category.setItems(FXCollections.observableArrayList(DbWork.read(services.catalog::categories, session, true)));
     TextField price = new TextField();
+    Ui.moneyField(price);
     price.setPromptText("例如：120.00");
     CheckBox active = new CheckBox("立即启用此项目");
     active.setSelected(true);
@@ -170,7 +171,7 @@ public class CatalogPage {
               p.categoryId = category.getValue() == null ? 0 : category.getValue().id;
               p.priceCents = Money.parse(price.getText());
               p.active = active.isSelected();
-              services.catalog.addProject(session, p);
+              DbWork.read(services.catalog::addProject, session, p);
               load();
               Ui.info("治疗项目新增成功！");
             } catch (Exception e) {
@@ -180,6 +181,6 @@ public class CatalogPage {
           }
           return b;
         });
-    d.showAndWait();
+    Ui.show(d);
   }
 }

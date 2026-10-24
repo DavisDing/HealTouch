@@ -25,7 +25,7 @@ public class DashboardService {
     Authorization.require(actor, Permission.PATIENT_VIEW);
     try (Connection c = dataSource.getConnection()) {
       Today t = new Today();
-      t.incomeCents =
+      if(actor.can(Permission.BILL_CHARGE) || actor.can(Permission.REPORT_VIEW) || actor.can(Permission.BILL_REFUND)) t.incomeCents =
           query(
               c,
               "SELECT COALESCE(SUM(CASE WHEN status IN ('PAID','PARTIALLY_REFUNDED','REFUNDED')"
@@ -45,6 +45,11 @@ public class DashboardService {
     } catch (SQLException e) {
       throw new IllegalStateException("读取工作台数据失败", e);
     }
+  }
+
+  public Today report(UserSession actor) {
+    Authorization.require(actor,Permission.REPORT_VIEW);
+    return today(actor);
   }
 
   private long query(Connection c, String sql) throws SQLException {

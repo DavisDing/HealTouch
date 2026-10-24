@@ -18,7 +18,7 @@ public class ReportPage {
   }
 
   public Parent node() {
-    DashboardService.Today today = services.dashboard.today(session);
+    DashboardService.Today today = DbWork.read(services.dashboard::report, session);
     Label net = new Label("今日服务净收入：" + Money.format(today.incomeCents));
     net.setStyle("-fx-font-size: 26px; -fx-font-weight: bold;");
     Label rule = new Label("统计口径：按支付成功日统计服务收入；退款按执行日冲减净收入。预存充值仅作为资金流入，不计入服务收入。");

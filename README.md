@@ -700,3 +700,9 @@ java -jar target/healtouch-1.0.0-SNAPSHOT-shaded.jar
 首次启动会在用户目录创建 `HealTouch/healtouch.db`，不会写入安装目录。首次启动时，软件会要求操作者为管理员账号 `admin` 设置密码；该密码不会以明文内置或显示在界面中。
 
 > 生产发布时，GitHub Actions 会从 `actions/setup-java` 提供的 x86/x64 BellSoft Liberica Java 8 `jdk+fx` 中取得经工作流验证的内置 JavaFX Runtime；运行时随对应安装包内置，不存储任何业务数据。
+
+## 安全与流程修复交接（2026-10-24）
+
+当前源码补充了会话实时校验、患者分页选择、折扣审批、退款撤销、后台数据库任务、滚动日志与加密备份/还原。备份入口位于系统管理下的“数据备份与还原”；首次使用需管理员配置目录、每日时间与至少 12 位备份口令。自动备份在应用运行时执行，软件关闭期间不执行系统级定时任务。
+
+逐项复核、数据迁移边界、已执行检查、未执行的 Java/GUI 验收和实际验证步骤见 [修复交接记录](docs/REMEDIATION_REVIEW.md)。源码实现不代表 Windows 安装包或恢复演练已通过验收。

@@ -28,8 +28,11 @@ public class PermissionPage {
     permissions.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
     Runnable load =
         () -> {
+          permissions.setItems(FXCollections.observableArrayList(role.getValue()==RoleCode.ADMIN
+              ? java.util.Arrays.asList(Permission.values())
+              : java.util.Arrays.asList(Permission.values()).stream().filter(p -> p!=Permission.SYSTEM_MANAGE && p!=Permission.DISCOUNT_APPLY).collect(java.util.stream.Collectors.toList())));
           permissions.getSelectionModel().clearSelection();
-          for (Permission p : services.permissions.permissionsFor(role.getValue()))
+          for (Permission p : DbWork.read(services.permissions::permissionsFor, session, role.getValue()))
             permissions.getSelectionModel().select(p);
         };
     role.setOnAction(e -> load.run());
@@ -41,7 +44,7 @@ public class PermissionPage {
               throw new IllegalArgumentException("系统管理员为内置角色，始终拥有全部权限");
             EnumSet<Permission> selected = EnumSet.noneOf(Permission.class);
             selected.addAll(permissions.getSelectionModel().getSelectedItems());
-            services.permissions.update(session, role.getValue(), selected);
+            DbWork.write(services.permissions::update, session, role.getValue(), selected);
             Ui.info("角色权限已保存，角色变更即时生效。");
           } catch (Exception ex) {
             Ui.error(ex);

@@ -1,1 +1,3 @@
-日志默认输出到控制台；生产部署可通过 slf4j-simple 配置重定向至数据目录 logs。
+应用启动时由 com.healtouch.config.Logging 将 stderr 和未捕获异常写入数据目录 logs/healtouch-%g.log。
+使用 JDK 自带滚动 FileHandler（每份2 MiB，保留5份），无需 Logback。
+Ui.error 记录完整异常链。备份口令和登录密码不应写入日志。

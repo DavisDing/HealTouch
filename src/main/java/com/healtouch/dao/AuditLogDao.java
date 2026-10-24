@@ -17,7 +17,7 @@ public class AuditLogDao {
     try (PreparedStatement ps =
         connection.prepareStatement(
             "INSERT INTO audit_log(operator_id, action, target_type, target_id, before_value,"
-                + " after_value) VALUES (?, ?, ?, ?, ?, ?)")) {
+                + " after_value,ip_address) VALUES (?, ?, ?, ?, ?, ?, '127.0.0.1')")) {
       if (operatorId == null) ps.setNull(1, java.sql.Types.INTEGER);
       else ps.setLong(1, operatorId);
       ps.setString(2, action);

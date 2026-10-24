@@ -11,6 +11,8 @@ import com.healtouch.service.PatientService;
 import com.healtouch.service.PermissionService;
 import com.healtouch.service.RefundService;
 import com.healtouch.service.UserService;
+import com.healtouch.service.BackupService;
+import com.healtouch.service.MaintenanceService;
 
 /** Application-level service container. The desktop process shares one SQLite connection pool. */
 public class AppServices implements AutoCloseable {
@@ -24,9 +26,11 @@ public class AppServices implements AutoCloseable {
   public final RefundService refunds;
   public final DashboardService dashboard;
   public final PermissionService permissions;
+  public final BackupService backups;
+  public final MaintenanceService maintenance;
 
   public AppServices() {
-    database = new Database();
+    database = new Database(com.healtouch.config.AppPaths.databaseFile(),true);
     Authorization.configure(database.dataSource());
     auth = new AuthService(database.dataSource());
     users = new UserService(database.dataSource());
@@ -37,10 +41,13 @@ public class AppServices implements AutoCloseable {
     refunds = new RefundService(database.dataSource());
     dashboard = new DashboardService(database.dataSource());
     permissions = new PermissionService(database.dataSource());
+    backups = new BackupService(database);
+    maintenance = new MaintenanceService(database,billing,backups);
   }
 
   @Override
   public void close() {
+    maintenance.close();
     database.close();
   }
 }

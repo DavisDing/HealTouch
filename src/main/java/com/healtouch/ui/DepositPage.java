@@ -29,16 +29,14 @@ public class DepositPage {
   }
 
   public Parent node() {
-    ComboBox<Patient> patient = new ComboBox<Patient>();
-    patient.setPrefWidth(320);
-    patient.setPromptText("选择需要充值或查看的患者...");
+    PatientPicker picker = new PatientPicker(services, session);
+    ComboBox<Patient> patient = picker.choice();
 
     TableView<DepositService.TransactionSummary> history = historyTable();
-    try { patient.setItems(FXCollections.observableArrayList(services.patients.search(session, ""))); }
-    catch (Exception exception) { Ui.error(exception); }
     patient.setOnAction(event -> refresh(patient.getValue(), history));
 
     TextField amount = new TextField();
+    Ui.moneyField(amount);
     amount.setPromptText("输入充值/退款金额 (元)");
     amount.setPrefWidth(180);
 
@@ -53,7 +51,7 @@ public class DepositPage {
     recharge.setOnAction(event -> {
       try {
         if (patient.getValue() == null) throw new IllegalArgumentException("请选择患者");
-        services.deposits.recharge(session, patient.getValue().id, Money.parse(amount.getText()), method.getValue(), "门诊柜台充值");
+        DbWork.write(services.deposits::recharge, session, patient.getValue().id, Money.parse(amount.getText()), method.getValue(), "门诊柜台充值");
         refresh(patient.getValue(), history);
         amount.clear();
         Ui.info("预存金充值成功，资金变动流水已实时双写生效！");
@@ -66,7 +64,7 @@ public class DepositPage {
       try {
         if (patient.getValue() == null) throw new IllegalArgumentException("请选择患者");
         if (!Ui.confirm("确认从该患者的可用预存余额中扣除并退还资金？")) return;
-        services.deposits.refundBalance(session, patient.getValue().id, Money.parse(amount.getText()), method.getValue(), "门诊预存余额退款");
+        DbWork.write(services.deposits::refundBalance, session, patient.getValue().id, Money.parse(amount.getText()), method.getValue(), "门诊预存余额退款");
         refresh(patient.getValue(), history);
         amount.clear();
         Ui.info("预存余额退款已顺利完成并记录冲正审计流水！");
@@ -74,7 +72,7 @@ public class DepositPage {
     });
 
     balance.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #087F6D;");
-    HBox patientSelectRow = new HBox(12, new Label("办理患者 *:"), patient, balance);
+    HBox patientSelectRow = new HBox(12, new Label("办理患者 *:"), picker, balance);
     patientSelectRow.setAlignment(Pos.CENTER_LEFT);
 
     HBox actionRow = new HBox(12, new Label("变动金额 *:"), amount, new Label("渠道方式 *:"), method, recharge, refund);
@@ -136,18 +134,13 @@ public class DepositPage {
   private void refresh(Patient patient, TableView<DepositService.TransactionSummary> history) {
     try {
       if (patient != null) {
-        balance.setText("当前可用预存金余额：" + Money.format(services.deposits.balance(session, patient.id)));
-        history.setItems(FXCollections.observableArrayList(services.deposits.history(session, patient.id)));
+        balance.setText("当前可用预存金余额：" + Money.format(DbWork.read(services.deposits::balance, session, patient.id)));
+        history.setItems(FXCollections.observableArrayList(DbWork.read(services.deposits::history, session, patient.id)));
+      } else {
+        balance.setText("请选择患者查看预存资金");history.getItems().clear();
       }
-    } catch (Exception exception) { Ui.error(exception); }
+    } catch (Exception exception) { balance.setText("预存数据加载失败，请重试");history.getItems().clear();Ui.error(exception); }
   }
 
-  private boolean can(Permission permission) {
-    try {
-      Authorization.require(session, permission);
-      return true;
-    } catch (SecurityException e) {
-      return false;
-    }
-  }
+  private boolean can(Permission permission) { return session.can(permission); }
 }

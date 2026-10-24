@@ -7,7 +7,7 @@ public class TreatmentLine {
   public final int quantity;
 
   public TreatmentLine(long projectId, String projectName, long unitPriceCents, int quantity) {
-    if (projectId <= 0 || unitPriceCents < 0 || quantity <= 0)
+    if (projectId <= 0 || unitPriceCents <= 0 || quantity <= 0)
       throw new IllegalArgumentException("治疗项目参数无效");
     this.projectId = projectId;
     this.projectName = projectName;
@@ -16,6 +16,6 @@ public class TreatmentLine {
   }
 
   public long subtotalCents() {
-    return unitPriceCents * quantity;
+    return Math.multiplyExact(unitPriceCents, quantity);
   }
 }

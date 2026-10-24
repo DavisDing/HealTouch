@@ -12,6 +12,9 @@ import com.healtouch.util.Checks;
 import com.healtouch.util.Codes;
 import java.sql.*;
 import java.util.List;
+import java.util.Set;
+import java.util.Collections;
+import java.util.ArrayList;
 import javax.sql.DataSource;
 
 public class PatientService {
@@ -43,7 +46,7 @@ public class PatientService {
   public PageResult<Patient> searchPage(
       UserSession actor, String keyword, PatientType patientType, int page, int pageSize) {
     Authorization.require(actor, Permission.PATIENT_VIEW);
-    if (page < 1 || pageSize < 1) throw new IllegalArgumentException("分页参数不正确");
+    if (page < 1 || pageSize < 1 || pageSize>PatientDao.MAX_PAGE_SIZE) throw new IllegalArgumentException("分页参数不正确");
     long total = patientDao.countSearch(keyword, patientType);
     int totalPages = (int) Math.max(1L, (total + pageSize - 1L) / pageSize);
     int actualPage = Math.min(page, totalPages);
@@ -52,6 +55,18 @@ public class PatientService {
   }
 
   public long create(UserSession actor, Patient p) {
+    return create(actor,p,Collections.<Long>emptySet());
+  }
+
+  public static class PossibleDuplicateException extends IllegalArgumentException {
+    public final List<Patient> matches;
+    public PossibleDuplicateException(List<Patient> matches) {
+      super("存在姓名、生日或联系电话相同的档案，请核对疑似重复患者");
+      this.matches=Collections.unmodifiableList(matches);
+    }
+  }
+
+  public long create(UserSession actor, Patient p, Set<Long> confirmedDuplicates) {
     Authorization.require(actor, Permission.PATIENT_EDIT);
     validate(p);
     return Jdbc.inTransaction(
@@ -64,6 +79,11 @@ public class PatientService {
             try (ResultSet rs = duplicate.executeQuery()) {
               if (rs.next()) throw new IllegalArgumentException("该证件已有档案，患者ID：" + rs.getLong(1));
             }
+          }
+          List<Patient> matches = possibleDuplicates(c,p);
+          for(Patient match:matches) {
+            if(confirmedDuplicates==null || !confirmedDuplicates.contains(match.id))
+              throw new PossibleDuplicateException(matches);
           }
           long id;
           try (PreparedStatement ps =
@@ -108,6 +128,7 @@ public class PatientService {
           }
           audit.record(
               c, actor.userId, "PATIENT_CREATED", "PATIENT", String.valueOf(id), null, p.name);
+          if(!matches.isEmpty()) audit.record(c,actor.userId,"PATIENT_DUPLICATE_CONFIRMED","PATIENT",String.valueOf(id),null,confirmedDuplicates.toString());
           return id;
         });
   }
@@ -181,6 +202,18 @@ public class PatientService {
       Checks.required(p.guardianRelationship, "监护人关系");
       Checks.required(p.guardianPhone, "监护人电话");
     }
+  }
+
+  private List<Patient> possibleDuplicates(Connection c, Patient p) throws SQLException {
+    List<Patient> matches=new ArrayList<Patient>();
+    String sql="SELECT p.*,0 balance_cents FROM patient p WHERE name=? OR birth_date=? OR phone IN (?,?) OR (guardian_phone<>'' AND guardian_phone IN (?,?))";
+    try(PreparedStatement ps=c.prepareStatement(sql)) {
+      ps.setString(1,p.name.trim());ps.setString(2,p.birthDate.toString());
+      ps.setString(3,p.phone.trim());ps.setString(4,p.guardianPhone==null||p.guardianPhone.trim().isEmpty()?p.phone.trim():p.guardianPhone.trim());
+      ps.setString(5,p.phone.trim());ps.setString(6,p.guardianPhone==null||p.guardianPhone.trim().isEmpty()?p.phone.trim():p.guardianPhone.trim());
+      try(ResultSet rs=ps.executeQuery()) { while(rs.next()) matches.add(PatientDao.map(rs)); }
+    }
+    return matches;
   }
 
   private Patient load(Connection c, long id) throws SQLException {

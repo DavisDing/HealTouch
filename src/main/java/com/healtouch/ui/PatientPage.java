@@ -176,7 +176,7 @@ public class PatientPage {
       PatientType filter = null;
       if ("成人".equals(typeFilter.getValue())) filter = PatientType.ADULT;
       if ("小儿".equals(typeFilter.getValue())) filter = PatientType.CHILD;
-      PageResult<Patient> result = services.patients.searchPage(session, search.getText(), filter, currentPage, PAGE_SIZE);
+      PageResult<Patient> result = DbWork.read(services.patients::searchPage, session, search.getText(), filter, currentPage, PAGE_SIZE);
       currentPage = result.getPage();
       table.setItems(FXCollections.observableArrayList(result.getItems()));
       previousPage.setDisable(!result.hasPreviousPage());
@@ -208,7 +208,7 @@ public class PatientPage {
     text.append("药物过敏史: ").append(emptyAsDash(patient.allergies)).append("\n");
     text.append("家庭住址: ").append(emptyAsDash(patient.address));
     alert.setContentText(text.toString());
-    alert.showAndWait();
+    Ui.show(alert);
   }
 
   private String emptyAsDash(String value) {
@@ -287,15 +287,26 @@ public class PatientPage {
             patient.allergies = allergies.getText();
             patient.medicalHistory = medicalHistory.getText();
             patient.remark = remark.getText();
-            if (existing == null) services.patients.create(session, patient);
-            else services.patients.update(session, patient);
+            if (existing == null) {
+              try {DbWork.read(services.patients::create, session, patient);}
+              catch(com.healtouch.service.PatientService.PossibleDuplicateException duplicate) {
+                StringBuilder message=new StringBuilder("发现疑似重复档案，请核对后确认仍需新建：\n");
+                java.util.Set<Long> confirmed=new java.util.HashSet<Long>();
+                for(Patient match:duplicate.matches) {
+                  confirmed.add(match.id);message.append(match.patientCode).append(" · ").append(match.name).append(" · ").append(match.birthDate).append("\n");
+                }
+                if(!Ui.confirm(message.toString())) {event.consume();return;}
+                DbWork.read(services.patients::create,session,patient,confirmed);
+              }
+            }
+            else DbWork.write(services.patients::update, session, patient);
             load();
           } catch (Exception exception) {
             event.consume();
             Ui.error(exception);
           }
         });
-    dialog.showAndWait();
+    Ui.show(dialog);
   }
 
   private void updatePatientType(Label type, LocalDate birthDate) {
@@ -358,12 +369,5 @@ public class PatientPage {
     return copy;
   }
 
-  private boolean can(Permission permission) {
-    try {
-      Authorization.require(session, permission);
-      return true;
-    } catch (SecurityException e) {
-      return false;
-    }
-  }
+  private boolean can(Permission permission) { return session.can(permission); }
 }

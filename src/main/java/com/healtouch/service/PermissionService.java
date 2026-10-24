@@ -22,7 +22,8 @@ public class PermissionService {
     this.dataSource = dataSource;
   }
 
-  public Set<Permission> permissionsFor(RoleCode role) {
+  public Set<Permission> permissionsFor(UserSession actor, RoleCode role) {
+    Authorization.require(actor, Permission.SYSTEM_MANAGE);
     if (role == RoleCode.ADMIN) return EnumSet.allOf(Permission.class);
     EnumSet<Permission> result = EnumSet.noneOf(Permission.class);
     String sql =
@@ -40,9 +41,10 @@ public class PermissionService {
     }
   }
 
-  public Map<RoleCode, Set<Permission>> all() {
+  public Map<RoleCode, Set<Permission>> all(UserSession actor) {
+    Authorization.require(actor, Permission.SYSTEM_MANAGE);
     Map<RoleCode, Set<Permission>> map = new EnumMap<RoleCode, Set<Permission>>(RoleCode.class);
-    for (RoleCode role : RoleCode.values()) map.put(role, permissionsFor(role));
+    for (RoleCode role : RoleCode.values()) map.put(role, permissionsFor(actor, role));
     return map;
   }
 
@@ -52,6 +54,8 @@ public class PermissionService {
     if (role == RoleCode.ADMIN) throw new IllegalArgumentException("系统管理员为内置角色，不能修改其权限");
     final EnumSet<Permission> effective = EnumSet.noneOf(Permission.class);
     if (permissions != null) effective.addAll(permissions);
+    if (effective.contains(Permission.SYSTEM_MANAGE) || effective.contains(Permission.DISCOUNT_APPLY))
+      throw new IllegalArgumentException("系统管理和折扣授权仅限管理员，不可授予其他角色");
     Jdbc.inTransaction(
         dataSource,
         c -> {

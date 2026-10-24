@@ -51,6 +51,10 @@ public class DashboardPage {
     Button deposit = new Button("预存充值管理");
     deposit.setOnAction(e -> main.openDeposits());
 
+    create.setDisable(!session.can(com.healtouch.model.Permission.PATIENT_EDIT));
+    treatment.setDisable(!session.can(com.healtouch.model.Permission.TREATMENT_CREATE));
+    bill.setDisable(!session.can(com.healtouch.model.Permission.BILL_CHARGE) && !session.can(com.healtouch.model.Permission.BILL_REFUND));
+    deposit.setDisable(!session.can(com.healtouch.model.Permission.DEPOSIT_RECHARGE) && !session.can(com.healtouch.model.Permission.DEPOSIT_REFUND));
     HBox btnRow = new HBox(12, create, treatment, bill, deposit);
     btnRow.setAlignment(Pos.CENTER_LEFT);
     VBox shortcuts = Ui.section(shortcutTitle, shortcutSub, btnRow);
@@ -65,7 +69,18 @@ public class DashboardPage {
 
     VBox rules = Ui.section(ruleTitle, r1, r2, r3);
 
-    VBox page = Ui.page("首页工作台", "欢迎回来，" + session.name + " · 门诊接诊进行中", cards, shortcuts, rules);
+    Label backupWarning=new Label();backupWarning.setWrapText(true);
+    backupWarning.setStyle("-fx-text-fill: #B45309; -fx-font-weight: bold;");
+    Runnable updateBackupWarning=()->{
+      String warning=services.backups.problem();
+      if(!services.maintenance.problem().isEmpty()) warning=warning+"\n"+services.maintenance.problem();
+      backupWarning.setText(warning);backupWarning.setVisible(!warning.isEmpty());backupWarning.setManaged(!warning.isEmpty());
+    };
+    updateBackupWarning.run();
+    javafx.animation.Timeline warnings=new javafx.animation.Timeline(new javafx.animation.KeyFrame(javafx.util.Duration.seconds(10),e->updateBackupWarning.run()));
+    warnings.setCycleCount(javafx.animation.Animation.INDEFINITE);
+    backupWarning.sceneProperty().addListener((o,oldScene,newScene)->{if(newScene==null)warnings.stop();else warnings.play();});
+    VBox page = Ui.page("首页工作台", "欢迎回来，" + session.name + " · 门诊接诊进行中", backupWarning, cards, shortcuts, rules);
     refresh();
     return page;
   }
@@ -89,7 +104,7 @@ public class DashboardPage {
 
   private void refresh() {
     try {
-      DashboardService.Today t = services.dashboard.today(session);
+      DashboardService.Today t = DbWork.read(services.dashboard::today, session);
       income.setText(Money.format(t.incomeCents));
       patients.setText(String.valueOf(t.newPatients) + " 人次");
       bills.setText(String.valueOf(t.paidBills) + " 笔已结");

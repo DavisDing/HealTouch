@@ -32,7 +32,8 @@ public class CatalogService {
     this.dataSource = dataSource;
   }
 
-  public List<Category> categories(boolean enabledOnly) {
+  public List<Category> categories(UserSession actor, boolean enabledOnly) {
+    authorizeRead(actor, enabledOnly);
     List<Category> result = new ArrayList<Category>();
     String sql =
         "SELECT id,name,code,parent_id,active FROM project_category "
@@ -57,11 +58,12 @@ public class CatalogService {
     }
   }
 
-  public List<TreatmentProject> activeProjects() {
-    return projects(true);
+  public List<TreatmentProject> activeProjects(UserSession actor) {
+    return projects(actor, true);
   }
 
-  public List<TreatmentProject> projects(boolean enabledOnly) {
+  public List<TreatmentProject> projects(UserSession actor, boolean enabledOnly) {
+    authorizeRead(actor, enabledOnly);
     List<TreatmentProject> result = new ArrayList<TreatmentProject>();
     String sql =
         "SELECT p.*,c.name category_name FROM treatment_project p JOIN project_category c ON"
@@ -76,6 +78,11 @@ public class CatalogService {
     } catch (SQLException e) {
       throw new IllegalStateException("查询项目失败", e);
     }
+  }
+
+  private void authorizeRead(UserSession actor, boolean enabledOnly) {
+    if (enabledOnly) Authorization.requireAny(actor, Permission.PATIENT_VIEW, Permission.SYSTEM_MANAGE);
+    else Authorization.require(actor, Permission.SYSTEM_MANAGE);
   }
 
   public long addCategory(UserSession actor, String name, String code, Long parentId, int sort) {
@@ -168,7 +175,7 @@ public class CatalogService {
   private void validate(TreatmentProject p) {
     if (p == null) throw new IllegalArgumentException("项目不能为空");
     Checks.required(p.name, "项目名称");
-    if (p.categoryId <= 0 || p.priceCents < 0) throw new IllegalArgumentException("项目分类或价格不正确");
+    if (p.categoryId <= 0 || p.priceCents <= 0) throw new IllegalArgumentException("项目分类或价格不正确，价格必须大于0");
   }
 
   private TreatmentProject map(ResultSet rs) throws SQLException {

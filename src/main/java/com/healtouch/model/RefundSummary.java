@@ -9,4 +9,8 @@ public class RefundSummary {
   public String status;
   public String applicantName;
   public String approverName;
+  public String reason;
+  public String applicantRemark;
+  public String approvalRemark;
+  public String revokeReason;
 }

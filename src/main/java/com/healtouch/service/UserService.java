@@ -74,11 +74,13 @@ public class UserService {
         });
   }
 
-  public List<Staff> activeTherapists() {
+  public List<Staff> activeTherapists(UserSession actor) {
+    Authorization.require(actor, Permission.TREATMENT_CREATE);
     return list("WHERE u.active=1 AND r.code='THERAPIST'");
   }
 
-  public List<Staff> listAll() {
+  public List<Staff> listAll(UserSession actor) {
+    Authorization.require(actor, Permission.SYSTEM_MANAGE);
     return list("");
   }
 

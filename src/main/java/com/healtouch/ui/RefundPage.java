@@ -34,7 +34,7 @@ public class RefundPage {
         e -> {
           try {
             RefundSummary r = selected();
-            services.refunds.execute(session, r.id);
+            DbWork.write(services.refunds::execute, session, r.id);
             load();
             Ui.info("退款冲正已成功执行，相关预存资金流水已自动冲销入账！");
           } catch (Exception x) {
@@ -45,7 +45,11 @@ public class RefundPage {
     Button refresh = new Button("刷新列表");
     refresh.setOnAction(e -> load());
 
-    HBox tb = Ui.toolbar(refresh, Ui.spacer(), approve, reject, execute);
+    Button revoke=new Button("撤销申请");
+    revoke.setOnAction(e->{try {DbWork.write(services.refunds::revoke,session,selected().id,"操作者撤销退款申请");load();}catch(Exception error){Ui.error(error);}});
+    Button details=new Button("查看申请与审批意见");
+    details.setOnAction(e->{try{RefundSummary r=selected();Ui.info("申请理由："+r.reason+"\n申请备注："+empty(r.applicantRemark)+"\n审批意见："+empty(r.approvalRemark)+"\n撤销原因："+empty(r.revokeReason));}catch(Exception error){Ui.error(error);}});
+    HBox tb = Ui.toolbar(refresh, details, Ui.spacer(), approve, reject, revoke, execute);
 
     TableColumn<RefundSummary, String> codeCol = col("退款申请单号", x -> x.refundCode);
     codeCol.setPrefWidth(150);
@@ -103,7 +107,7 @@ public class RefundPage {
 
     VBox page = Ui.page(
         "退款审批与冲正管理",
-        "财务风控原则：退款须由前台/治疗师申请，经系统管理员审核批准后原路冲正，全流程审计留痕",
+        "具备退款权限的角色可申请 · 申请人不得自审 · 审批后按原支付方式退款 · 全流程审计留痕",
         tb,
         table);
     load();
@@ -113,7 +117,10 @@ public class RefundPage {
   private void decide(boolean approve) {
     try {
       RefundSummary r = selected();
-      services.refunds.approve(session, r.id, approve, approve ? "门诊管理员审核通过" : "退款理由不充分，予以驳回");
+      TextInputDialog comment=new TextInputDialog(approve?"审核通过":"");
+      comment.setTitle(approve?"审批通过":"驳回申请");comment.setHeaderText("申请理由："+r.reason+"\n申请备注："+empty(r.applicantRemark));comment.setContentText("审批意见：");
+      java.util.Optional<String> opinion=Ui.show(comment);if(!opinion.isPresent())return;
+      DbWork.write(services.refunds::approve, session, r.id, approve, opinion.get());
       load();
       Ui.info(approve ? "退款申请已批准！请在核验后点击【执行冲正退款】完成资金原路冲正。" : "已成功驳回该退款申请。");
     } catch (Exception e) {
@@ -126,10 +133,11 @@ public class RefundPage {
     if (r == null) throw new IllegalArgumentException("请在列表中选择需要操作的退款单据");
     return r;
   }
+  private String empty(String value){return value==null||value.trim().isEmpty()?"无":value;}
 
   private void load() {
     try {
-      table.setItems(FXCollections.observableArrayList(services.refunds.list()));
+      table.setItems(FXCollections.observableArrayList(DbWork.read(services.refunds::list, session)));
     } catch (Exception e) {
       Ui.error(e);
     }
@@ -146,6 +154,7 @@ public class RefundPage {
     if ("PENDING_APPROVAL".equals(s)) return "待审批";
     if ("APPROVED".equals(s)) return "已审批";
     if ("EXECUTED".equals(s)) return "已执行";
+    if ("REVOKED".equals(s)) return "已撤销";
     if ("REJECTED".equals(s)) return "已驳回";
     return s;
   }

@@ -1,68 +1,69 @@
 package com.healtouch.service;
 
-import com.healtouch.model.Permission;
-import com.healtouch.model.RoleCode;
-import com.healtouch.model.UserSession;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import com.healtouch.model.*;
+import java.sql.*;
+import java.util.*;
 import javax.sql.DataSource;
 
-/** 每个业务入口都会调用本类。已配置数据库时从角色权限表实时判断，停用/角色变更即时生效。 */
+/** Database authorization is authoritative; the permission cache is only for UI rendering. */
 public final class Authorization {
   private static volatile DataSource dataSource;
-
+  private static final Set<UserSession> sessions = Collections.synchronizedSet(
+      Collections.newSetFromMap(new WeakHashMap<UserSession, Boolean>()));
   private Authorization() {}
-
-  public static void configure(DataSource source) {
-    dataSource = source;
+  public static void configure(DataSource source) { dataSource = source; }
+  public static class SessionExpiredException extends SecurityException {
+    public SessionExpiredException() { super("会话已失效，请重新登录"); }
   }
-
+  public static void invalidateAll() {
+    synchronized (sessions) { for (UserSession session : sessions) session.invalidate(); }
+  }
+  public static void validateSession(UserSession session) { refresh(session); }
+  public static void refresh(UserSession session) {
+    if (session == null || !session.isValid()) throw new SessionExpiredException();
+    DataSource source = dataSource;
+    if (source == null) throw new IllegalStateException("权限数据源尚未初始化");
+    try (Connection c = source.getConnection();
+        PreparedStatement user = c.prepareStatement("SELECT active,session_version FROM app_user WHERE id=?")) {
+      user.setLong(1, session.userId);
+      try (ResultSet rs = user.executeQuery()) {
+        if (!rs.next() || !rs.getBoolean(1) || rs.getLong(2) != session.credentialVersion) {
+          session.invalidate(); throw new SessionExpiredException();
+        }
+      }
+      EnumSet<RoleCode> roles = EnumSet.noneOf(RoleCode.class);
+      try (PreparedStatement ps = c.prepareStatement(
+          "SELECT r.code FROM role r JOIN user_role ur ON r.id=ur.role_id WHERE ur.user_id=?")) {
+        ps.setLong(1, session.userId);
+        try (ResultSet rs = ps.executeQuery()) { while (rs.next()) roles.add(RoleCode.valueOf(rs.getString(1))); }
+      }
+      if (!roles.equals(session.roles)) { session.invalidate(); throw new SessionExpiredException(); }
+      EnumSet<Permission> permissions = EnumSet.noneOf(Permission.class);
+      if (roles.contains(RoleCode.ADMIN)) permissions = EnumSet.allOf(Permission.class);
+      else {
+        try (PreparedStatement ps = c.prepareStatement(
+            "SELECT DISTINCT p.code FROM user_role ur JOIN role_permission rp ON rp.role_id=ur.role_id "
+                + "JOIN permission p ON p.id=rp.permission_id WHERE ur.user_id=?")) {
+          ps.setLong(1, session.userId);
+          try (ResultSet rs = ps.executeQuery()) { while (rs.next()) permissions.add(Permission.valueOf(rs.getString(1))); }
+        }
+        permissions.remove(Permission.SYSTEM_MANAGE);
+        permissions.remove(Permission.DISCOUNT_APPLY);
+      }
+      session.setPermissions(permissions);
+      sessions.add(session);
+    } catch (SQLException e) { throw new IllegalStateException("权限校验失败", e); }
+  }
   public static boolean allowed(UserSession session, Permission permission) {
     if (session == null) return false;
-    if (session.isAdmin()) return true; // 内置管理员不可配置，始终拥有全部权限
-    DataSource source = dataSource;
-    if (source != null) {
-      String sql =
-          "SELECT 1 FROM app_user u JOIN user_role ur ON ur.user_id=u.id JOIN role_permission rp ON"
-              + " rp.role_id=ur.role_id JOIN permission p ON p.id=rp.permission_id WHERE u.id=? AND"
-              + " u.active=1 AND p.code=? LIMIT 1";
-      try (Connection c = source.getConnection();
-          PreparedStatement ps = c.prepareStatement(sql)) {
-        ps.setLong(1, session.userId);
-        ps.setString(2, permission.name());
-        try (ResultSet rs = ps.executeQuery()) {
-          return rs.next();
-        }
-      } catch (Exception e) {
-        throw new IllegalStateException("权限校验失败", e);
-      }
-    }
-    // 无数据库的纯单元测试回退到系统默认矩阵。
-    switch (permission) {
-      case PATIENT_VIEW:
-        return session.roles.contains(RoleCode.RECEPTION)
-            || session.roles.contains(RoleCode.THERAPIST)
-            || session.roles.contains(RoleCode.FINANCE);
-      case PATIENT_EDIT:
-        return session.roles.contains(RoleCode.RECEPTION);
-      case TREATMENT_CREATE:
-        return session.roles.contains(RoleCode.RECEPTION)
-            || session.roles.contains(RoleCode.THERAPIST);
-      case BILL_CHARGE:
-      case DEPOSIT_RECHARGE:
-        return session.roles.contains(RoleCode.RECEPTION);
-      case DEPOSIT_REFUND:
-      case BILL_REFUND:
-      case REPORT_VIEW:
-        return session.roles.contains(RoleCode.FINANCE);
-      default:
-        return false;
-    }
+    refresh(session); session.touch(); return session.can(permission);
   }
-
   public static void require(UserSession session, Permission permission) {
-    if (!allowed(session, permission))
-      throw new SecurityException(session == null ? "请先登录" : "当前账号无“" + permission.name() + "”权限");
+    if (!allowed(session, permission)) throw new SecurityException("当前账号无“" + permission.getLabel() + "”权限");
+  }
+  public static void requireAny(UserSession session, Permission... permissions) {
+    refresh(session); session.touch();
+    for (Permission permission : permissions) if (session.can(permission)) return;
+    throw new SecurityException("当前账号无此操作权限");
   }
 }

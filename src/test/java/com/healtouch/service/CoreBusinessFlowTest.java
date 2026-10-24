@@ -54,7 +54,7 @@ public class CoreBusinessFlowTest {
     patient.phone = "13800000000";
     long patientId = patients.create(admin, patient);
     long projectId =
-        catalog.addProject(admin, project("颈肩推拿", catalog.categories(true).get(0).id, 10000));
+        catalog.addProject(admin, project("颈肩推拿", catalog.categories(admin, true).get(0).id, 10000));
     long therapistId =
         users.create(
             admin,
@@ -85,7 +85,7 @@ public class CoreBusinessFlowTest {
             new PaymentLine(PaymentMethod.DEPOSIT, 4000),
             new PaymentLine(PaymentMethod.CASH, 6000)));
     assertEquals(0, deposits.balance(admin, patientId));
-    BillSummary bill = billing.list("", null).get(0);
+    BillSummary bill = billing.list(admin, "", null).get(0);
     assertEquals(BillStatus.PAID, bill.status);
     assertEquals(10000, bill.paidCents);
     assertEquals(0, bill.refundedCents);
@@ -113,7 +113,7 @@ public class CoreBusinessFlowTest {
       patient.gender = Gender.UNKNOWN;
       patient.idType = "测试证件";
       patient.idNumber = "PAGE-" + index;
-      patient.birthDate = LocalDate.of(1990, 1, 1);
+      patient.birthDate = LocalDate.of(1990, 1, 1).plusDays(index);
       patient.phone = String.format("139%08d", index);
       patients.create(admin, patient);
     }

@@ -34,6 +34,10 @@ public class RefundService {
             throw new IllegalStateException("仅已支付或部分退款账单可申请退款");
           long remaining = bill.paid - bill.refunded;
           if (amountCents > remaining) throw new IllegalArgumentException("退款金额超过未退款实收额");
+          try (PreparedStatement ps = c.prepareStatement("SELECT 1 FROM refund_request WHERE bill_id=? AND status IN ('PENDING_APPROVAL','APPROVED')")) {
+            ps.setLong(1,billId);
+            try(ResultSet rs=ps.executeQuery()) { if(rs.next()) throw new IllegalStateException("该账单已有待审批或待执行退款，请先处理或撤销"); }
+          }
           Map<PaymentMethod, Long> allocated = allocate(c, billId, amountCents);
           long id;
           try (PreparedStatement ps =
@@ -73,10 +77,11 @@ public class RefundService {
         });
   }
 
-  public List<RefundSummary> list() {
+  public List<RefundSummary> list(UserSession actor) {
+    Authorization.require(actor, Permission.BILL_REFUND);
     List<RefundSummary> result = new ArrayList<RefundSummary>();
     String sql =
-        "SELECT r.id,r.refund_code,r.requested_cents,r.status,b.bill_code,p.name"
+        "SELECT r.id,r.refund_code,r.requested_cents,r.status,r.reason,r.remark,r.approval_remark,r.revoke_reason,b.bill_code,p.name"
             + " patient_name,a.name applicant_name,ap.name approver_name FROM refund_request r JOIN"
             + " bill b ON b.id=r.bill_id JOIN patient p ON p.id=b.patient_id JOIN app_user a ON"
             + " a.id=r.applicant_id LEFT JOIN app_user ap ON ap.id=r.approver_id ORDER BY"
@@ -94,6 +99,8 @@ public class RefundService {
         x.status = rs.getString("status");
         x.applicantName = rs.getString("applicant_name");
         x.approverName = rs.getString("approver_name");
+        x.reason=rs.getString("reason");x.applicantRemark=rs.getString("remark");
+        x.approvalRemark=rs.getString("approval_remark");x.revokeReason=rs.getString("revoke_reason");
         result.add(x);
       }
       return result;
@@ -108,13 +115,13 @@ public class RefundService {
         dataSource,
         c -> {
           Refund r = loadRequest(c, requestId);
-          if (r.status == Status.EXECUTED || r.status == Status.REJECTED)
+          if (r.status != Status.PENDING_APPROVAL)
             throw new IllegalStateException("退款单已处理，不能重复审批");
           if (r.applicantId == actor.userId) throw new SecurityException("申请人不得审批自己的退款单");
           try (PreparedStatement ps =
               c.prepareStatement(
                   "UPDATE refund_request SET"
-                      + " status=?,approver_id=?,approved_at=CURRENT_TIMESTAMP,remark=? WHERE id=?"
+                      + " status=?,approver_id=?,approved_at=CURRENT_TIMESTAMP,approval_remark=? WHERE id=?"
                       + " AND status='PENDING_APPROVAL'")) {
             ps.setString(1, approved ? "APPROVED" : "REJECTED");
             ps.setLong(2, actor.userId);
@@ -178,6 +185,14 @@ public class RefundService {
               String.valueOf(r.id),
               null,
               "bill=" + b.id + ", amount=" + r.amount);
+          // Legacy databases may already contain overlapping requests. Their allocation snapshots
+          // are stale after this execution; retain them as revoked records instead of orphaning them.
+          try(PreparedStatement ps=c.prepareStatement("SELECT id FROM refund_request WHERE bill_id=? AND id<>? AND status IN ('PENDING_APPROVAL','APPROVED')")) {
+            ps.setLong(1,b.id);ps.setLong(2,r.id);
+            List<Long> stale=new ArrayList<Long>();
+            try(ResultSet rs=ps.executeQuery()) { while(rs.next()) stale.add(rs.getLong(1)); }
+            for(Long id:stale) revoke(c,actor,id,"同账单退款已执行，请按新余额重新申请");
+          }
           return null;
         });
   }
@@ -205,7 +220,8 @@ public class RefundService {
       if (method == PaymentMethod.DEPOSIT) continue;
       long possible = Math.max(0, eligible.containsKey(method) ? eligible.get(method) : 0L);
       if (possible == 0) continue;
-      long take = (remaining * possible) / nonDepositTotal;
+      long take = java.math.BigInteger.valueOf(remaining).multiply(java.math.BigInteger.valueOf(possible))
+          .divide(java.math.BigInteger.valueOf(nonDepositTotal)).longValueExact();
       take = Math.min(take, possible);
       allocation.put(method, take);
       allocated += take;
@@ -223,6 +239,7 @@ public class RefundService {
       }
     }
     if (remainder != 0) throw new IllegalStateException("原支付明细可退金额不足");
+    allocation.entrySet().removeIf(entry -> entry.getValue() == 0);
     return allocation;
   }
 
@@ -261,6 +278,7 @@ public class RefundService {
             "INSERT INTO refund_payment(refund_request_id,payment_method,amount_cents)"
                 + " VALUES(?,?,?)")) {
       for (Map.Entry<PaymentMethod, Long> e : values.entrySet()) {
+        if (e.getValue() == 0) continue;
         ps.setLong(1, id);
         ps.setString(2, e.getKey().name());
         ps.setLong(3, e.getValue());
@@ -335,6 +353,20 @@ public class RefundService {
         return b;
       }
     }
+  }
+
+  public void revoke(UserSession actor, long requestId, String reason) {
+    Authorization.require(actor,Permission.BILL_REFUND);
+    Checks.required(reason,"撤销原因");
+    Jdbc.inTransaction(dataSource,c->{ revoke(c,actor,requestId,reason); return null; });
+  }
+
+  private void revoke(Connection c, UserSession actor, long requestId, String reason) throws SQLException {
+    try(PreparedStatement ps=c.prepareStatement("UPDATE refund_request SET status='REVOKED',revoked_at=CURRENT_TIMESTAMP,revoke_reason=? WHERE id=? AND status IN ('PENDING_APPROVAL','APPROVED')")) {
+      ps.setString(1,reason);ps.setLong(2,requestId);
+      if(ps.executeUpdate()!=1) throw new IllegalStateException("仅待审批或待执行退款单可撤销");
+    }
+    audit.record(c,actor.userId,"BILL_REFUND_REVOKED","REFUND",String.valueOf(requestId),null,reason);
   }
 
   private Refund loadRequest(Connection c, long id) throws SQLException {

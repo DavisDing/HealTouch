@@ -83,6 +83,7 @@ public class MainView {
       add(nav, "reports", "数据统计", () -> show("reports", new ReportPage(services, session).node()));
 
     if (can(Permission.SYSTEM_MANAGE)) {
+      Ui.openRecovery=()->show("backups",new BackupPage(services,session).node());
       Separator sep = new Separator();
       sep.setStyle("-fx-padding: 10 4 6 4;");
       nav.getChildren().add(sep);
@@ -93,6 +94,7 @@ public class MainView {
 
       add(nav, "users", "用户管理", () -> show("users", new UserPage(services, session).node()));
       add(nav, "permissions", "权限管理", () -> show("permissions", new PermissionPage(services, session).node()));
+      add(nav, "backups", "数据备份与还原", () -> show("backups", new BackupPage(services, session).node()));
       add(nav, "catalog", "治疗项目", () -> show("catalog", new CatalogPage(services, session).node()));
     }
 
@@ -143,10 +145,7 @@ public class MainView {
 
   public void openDeposits() { show("deposits", new DepositPage(services, session).node()); }
 
-  private boolean can(Permission p) {
-    try { Authorization.require(session, p); return true; }
-    catch (SecurityException e) { return false; }
-  }
+  private boolean can(Permission p) { return session.can(p); }
 
   private void add(VBox box, final String key, String text, final Runnable action) {
     Button b = Ui.navButton(text);

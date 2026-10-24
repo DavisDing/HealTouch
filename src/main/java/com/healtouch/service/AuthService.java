@@ -82,7 +82,7 @@ public class AuthService {
                     return LoginResult.failure("账号已锁定，请 15 分钟后重试");
                   }
                   if (!BCrypt.checkpw(password, resultSet.getString("password_hash"))) {
-                    int failures = resultSet.getInt("failed_login_count") + 1;
+                    int failures = (lockedUntil == null ? resultSet.getInt("failed_login_count") : 0) + 1;
                     recordFailedLogin(connection, userId, failures);
                     return LoginResult.failure(
                         failures >= 5 ? "连续 5 次登录失败，账号已锁定 15 分钟" : "账号或密码错误");
@@ -103,20 +103,20 @@ public class AuthService {
                           resultSet.getString("user_code"),
                           resultSet.getString("name"),
                           roles,
-                          resultSet.getBoolean("must_change_password")));
+                          resultSet.getBoolean("must_change_password"),
+                          resultSet.getLong("session_version"), System::nanoTime));
                 }
               }
             });
     if (result.failureMessage != null) {
       throw new SecurityException(result.failureMessage);
     }
+    Authorization.refresh(result.session);
     return result.session;
   }
 
   public void changePassword(UserSession session, String oldPassword, String newPassword) {
-    if (session == null) {
-      throw new SecurityException("请先登录");
-    }
+    Authorization.validateSession(session);
     validatePassword(newPassword);
     Jdbc.inTransaction(
         dataSource,
@@ -147,6 +147,7 @@ public class AuthService {
               null);
           return null;
         });
+    session.invalidate();
   }
 
   public static void validatePassword(String password) {

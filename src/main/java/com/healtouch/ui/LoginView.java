@@ -30,7 +30,7 @@ public class LoginView {
     root.setAlignment(Pos.CENTER);
     root.setPadding(new Insets(42));
     root.getChildren().addAll(intro, card);
-    if (services.auth.requiresInitialAdministratorSetup()) {
+    if (DbWork.read(services.auth::requiresInitialAdministratorSetup)) {
       createInitialAdministratorForm(services, onLogin, card);
     } else {
       createLoginForm(services, onLogin, card);
@@ -61,8 +61,8 @@ public class LoginView {
             if (!password.getText().equals(confirmation.getText())) {
               throw new IllegalArgumentException("两次输入的密码不一致");
             }
-            services.auth.initializeAdministrator(password.getText());
-            onLogin.accept(services.auth.login("admin", password.getText()));
+            DbWork.write(services.auth::initializeAdministrator, password.getText());
+            onLogin.accept(DbWork.read(services.auth::login, "admin", password.getText()));
           } catch (Exception exception) {
             Ui.error(exception);
           }
@@ -94,9 +94,9 @@ public class LoginView {
     login.setOnAction(
         event -> {
           try {
-            UserSession session = services.auth.login(account.getText(), password.getText());
+            UserSession session = DbWork.read(services.auth::login, account.getText(), password.getText());
             if (session.mustChangePassword) {
-              openLoggedInPasswordChange(services, session, () -> onLogin.accept(session));
+              openLoggedInPasswordChange(services, session, () -> Ui.info("密码已修改，请使用新密码重新登录。"));
             } else {
               onLogin.accept(session);
             }
@@ -137,15 +137,15 @@ public class LoginView {
         event -> {
           try {
             requireMatchingNewPasswords(newPassword, confirmation);
-            UserSession session = services.auth.login(account.getText(), oldPassword.getText());
-            services.auth.changePassword(session, oldPassword.getText(), newPassword.getText());
+            UserSession session = DbWork.read(services.auth::login, account.getText(), oldPassword.getText());
+            DbWork.write(services.auth::changePassword, session, oldPassword.getText(), newPassword.getText());
             Ui.info("密码已修改，请使用新密码登录。");
           } catch (Exception exception) {
             event.consume();
             Ui.error(exception);
           }
         });
-    dialog.showAndWait();
+    Ui.show(dialog);
   }
 
   private void openLoggedInPasswordChange(AppServices services, UserSession session, Runnable done) {
@@ -164,14 +164,14 @@ public class LoginView {
         event -> {
           try {
             requireMatchingNewPasswords(newPassword, confirmation);
-            services.auth.changePassword(session, oldPassword.getText(), newPassword.getText());
+            DbWork.write(services.auth::changePassword, session, oldPassword.getText(), newPassword.getText());
             done.run();
           } catch (Exception exception) {
             event.consume();
             Ui.error(exception);
           }
         });
-    dialog.showAndWait();
+    Ui.show(dialog);
   }
 
   private GridPane passwordForm(

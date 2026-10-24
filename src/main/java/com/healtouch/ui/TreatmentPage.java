@@ -31,9 +31,8 @@ public class TreatmentPage {
   }
 
   public Parent node() {
-    ComboBox<Patient> patient = new ComboBox<Patient>();
-    patient.setPrefWidth(280);
-    patient.setPromptText("选择就诊患者");
+    PatientPicker picker = new PatientPicker(services, session);
+    ComboBox<Patient> patient = picker.choice();
 
     ComboBox<UserService.Staff> therapist = new ComboBox<UserService.Staff>();
     therapist.setPrefWidth(200);
@@ -64,9 +63,8 @@ public class TreatmentPage {
     });
 
     try {
-      patient.setItems(FXCollections.observableArrayList(services.patients.search(session, "")));
-      therapist.setItems(FXCollections.observableArrayList(services.users.activeTherapists()));
-      project.setItems(FXCollections.observableArrayList(services.catalog.activeProjects()));
+      therapist.setItems(FXCollections.observableArrayList(DbWork.read(services.users::activeTherapists, session)));
+      project.setItems(FXCollections.observableArrayList(DbWork.read(services.catalog::activeProjects, session)));
     } catch (Exception e) {
       Ui.error(e);
     }
@@ -126,7 +124,7 @@ public class TreatmentPage {
         if (lines.isEmpty())
           throw new IllegalArgumentException("请至少添加一项治疗项目");
 
-        long id = services.billing.createPendingBill(
+        long id = DbWork.read(services.billing::createPendingBill,
             session,
             patient.getValue().id,
             date.getValue(),
@@ -134,7 +132,7 @@ public class TreatmentPage {
             note.getText(),
             new ArrayList<TreatmentLine>(lines));
 
-        long receivable = services.billing.receivable(session, id);
+        long receivable = DbWork.read(services.billing::receivable, session, id);
         if (canCharge) {
           showCharge(id, receivable, patient.getValue());
         } else {
@@ -151,7 +149,7 @@ public class TreatmentPage {
     GridPane form = new GridPane();
     form.setHgap(12);
     form.setVgap(10);
-    form.addRow(0, new Label("就诊患者 *:"), patient, new Label("就诊日期 *:"), date);
+    form.addRow(0, new Label("就诊患者 *:"), picker, new Label("就诊日期 *:"), date);
     form.addRow(1, new Label("主治治疗师 *:"), therapist, new Label("推拿项目 *:"), project, quantity, add);
 
     VBox formBox = Ui.section(new Label("登记信息与治疗师"), patientNotice, form);
@@ -184,10 +182,10 @@ public class TreatmentPage {
     total.setText(Money.format(sum()));
   }
 
-  private void showCharge(long billId, long receivable, Patient patient) {
+  public void showCharge(long billId, long receivable, Patient patient) {
     Dialog<ButtonType> dialog = new Dialog<ButtonType>();
     dialog.setTitle("门诊收银结算");
-    long balance = services.deposits.balance(session, patient.id);
+    long balance = DbWork.read(services.deposits::balance, session, patient.id);
     dialog.setHeaderText("应收总额：" + Money.format(receivable) + "  ·  患者可用预存余额：" + Money.format(balance));
 
     Label tip = new Label("【门诊收费规则】严禁欠费挂账，实收总额必须完全等于应收总额。\n系统已预填患者预存扣款，预存不足时请添加微信/支付宝或现金支付。");
@@ -219,6 +217,7 @@ public class TreatmentPage {
     paymentMethod.setValue(PaymentMethod.WECHAT);
 
     TextField value = new TextField();
+    Ui.moneyField(value);
     value.setPromptText("输入金额 (元)");
     value.setPrefWidth(110);
 
@@ -242,7 +241,7 @@ public class TreatmentPage {
     Label validationStatus = new Label();
     Runnable checkStatus = () -> {
       long paidSum = 0;
-      for (PaymentLine p : payments) paidSum += p.amountCents;
+      for (PaymentLine p : payments) paidSum = Math.addExact(paidSum, p.amountCents);
       if (paidSum == receivable) {
         validationStatus.setText("✓ 支付总和 " + Money.format(paidSum) + " ＝ 应收金额，校验通过。");
         validationStatus.setStyle("-fx-text-fill: #16A34A; -fx-font-weight: bold; -fx-font-size: 12px;");
@@ -255,36 +254,51 @@ public class TreatmentPage {
     payments.addListener((javafx.collections.ListChangeListener<PaymentLine>) c -> checkStatus.run());
     checkStatus.run();
 
-    VBox content = new VBox(12, tip, payToolbar, paymentTable, validationStatus);
+    boolean[] reprice={false},waitingDiscount={false};
+    Button discount=new Button(can(Permission.DISCOUNT_APPLY)?"折扣授权":"申请折扣");
+    discount.setOnAction(event->{try {
+      BillSummary bill=new BillSummary();bill.id=billId;bill.billCode="B#"+billId;
+      bill.receivableCents=receivable;bill.status=BillStatus.PENDING_PAYMENT;
+      DiscountDialog.Result result=DiscountDialog.show(services,session,bill);
+      if(result!=DiscountDialog.Result.NONE) {
+        waitingDiscount[0]=result==DiscountDialog.Result.REQUESTED;
+        reprice[0]=!waitingDiscount[0];dialog.setResult(ButtonType.CANCEL);dialog.close();
+      }
+    }catch(Exception error){Ui.error(error);}});
+    VBox content = new VBox(12, tip, discount, payToolbar, paymentTable, validationStatus);
     content.setPrefWidth(480);
 
     dialog.getDialogPane().setContent(content);
     dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
     Button ok = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
     ok.setText("确认收款入账");
+    Runnable enable = () -> {
+      long assigned=0;for(PaymentLine p:payments) assigned=Math.addExact(assigned,p.amountCents);
+      ok.setDisable(receivable<=0 || assigned!=receivable);
+    };
+    payments.addListener((javafx.collections.ListChangeListener<PaymentLine>) c -> enable.run());enable.run();
 
     ok.addEventFilter(
         javafx.event.ActionEvent.ACTION,
         event -> {
           try {
-            services.billing.checkout(session, billId, new ArrayList<PaymentLine>(payments));
+            DbWork.write(services.billing::checkout, session, billId, new ArrayList<PaymentLine>(payments));
             Ui.info("收款成功！账单已结清入账，预存资金扣减完成。");
           } catch (Exception exception) {
             event.consume();
             Ui.error(exception);
           }
         });
-    dialog.showAndWait();
-  }
-
-  private boolean can(Permission permission) {
-    try {
-      Authorization.require(session, permission);
-      return true;
-    } catch (SecurityException e) {
-      return false;
+    java.util.Optional<ButtonType> result=Ui.show(dialog);
+    if(reprice[0]) {showCharge(billId,DbWork.read(services.billing::receivable,session,billId),patient);return;}
+    if(waitingDiscount[0]) {Ui.info("折扣申请已提交，审批后请从账单页完成收费；该单仍受30分钟超时限制。");return;}
+    if ((!result.isPresent() || result.get()!=ButtonType.OK) && session.isValid()) {
+      try { DbWork.write(services.billing::voidPending,session,billId,"操作者取消收费会话"); }
+      catch(IllegalStateException ex) { Ui.error(ex); }
     }
   }
+
+  private boolean can(Permission permission) { return session.can(permission); }
 
   private TableColumn<PaymentLine, String> colPay(
       String title, java.util.function.Function<PaymentLine, String> value) {

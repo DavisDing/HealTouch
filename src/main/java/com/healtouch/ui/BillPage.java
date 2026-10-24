@@ -53,7 +53,19 @@ public class BillPage {
     refund.setDisable(!can(Permission.BILL_REFUND));
     refund.setOnAction(e -> refund());
 
-    HBox tb = Ui.toolbar(keyword, status, search, refresh, Ui.spacer(), prepaidHistory, voidBill, refund);
+    Button charge=Ui.primaryButton("收取选中账单");
+    charge.setDisable(!can(Permission.BILL_CHARGE));
+    charge.setOnAction(e->{try {
+      BillSummary bill=table.getSelectionModel().getSelectedItem();
+      if(bill==null || bill.status!=BillStatus.PENDING_PAYMENT) throw new IllegalArgumentException("请选择待收费账单");
+      com.healtouch.model.Patient patient=DbWork.read(services.patients::get,session,bill.patientId);
+      new TreatmentPage(services,session).showCharge(bill.id,DbWork.read(services.billing::receivable,session,bill.id),patient);load();
+    } catch(Exception error) {Ui.error(error);}});
+    Button discount=new Button(can(Permission.DISCOUNT_APPLY)?"折扣授权/审批":"申请折扣");
+    discount.setDisable(!can(Permission.BILL_CHARGE));
+    discount.setOnAction(e->discount());
+    HBox tb = Ui.toolbar(keyword, status, search, refresh);
+    HBox actions = Ui.toolbar(prepaidHistory, charge, discount, Ui.spacer(), voidBill, refund);
 
     TableColumn<BillSummary, String> billCodeCol = column("账单单据号", x -> x.billCode);
     billCodeCol.setPrefWidth(140);
@@ -118,6 +130,7 @@ public class BillPage {
         "账单与收银管理",
         "全额收齐原则 · 待收费单据 30 分钟未结算自动作废 · 严禁欠费挂账",
         tb,
+        actions,
         table);
     load();
     return page;
@@ -128,7 +141,7 @@ public class BillPage {
     try {
       if (bill == null) throw new IllegalArgumentException("请选择需要作废的账单");
       if (Ui.confirm("确认作废待收费账单 " + bill.billCode + " 吗？作废后不可恢复。")) {
-        services.billing.voidPending(session, bill.id, "前台操作员主动取消");
+        DbWork.write(services.billing::voidPending, session, bill.id, "前台操作员主动取消");
         load();
       }
     } catch (Exception exception) { Ui.error(exception); }
@@ -136,8 +149,7 @@ public class BillPage {
 
   private void load() {
     try {
-      services.billing.voidExpiredPending();
-      table.setItems(FXCollections.observableArrayList(services.billing.list(keyword.getText(), status.getValue())));
+      table.setItems(FXCollections.observableArrayList(DbWork.read(services.billing::list, session, keyword.getText(), status.getValue())));
     } catch (Exception e) { Ui.error(e); }
   }
 
@@ -145,7 +157,7 @@ public class BillPage {
     BillSummary bill = table.getSelectionModel().getSelectedItem();
     if (bill == null) { Ui.error(new IllegalArgumentException("请在列表中选择账单后查看该患者的预存记录")); return; }
     try {
-      long balance = services.deposits.balance(session, bill.patientId);
+      long balance = DbWork.read(services.deposits::balance, session, bill.patientId);
       TableView<DepositService.TransactionSummary> history = new TableView<DepositService.TransactionSummary>();
       history.getColumns().addAll(
           historyColumn("记账流水时间", row -> row.createdAt),
@@ -156,30 +168,40 @@ public class BillPage {
           historyColumn("审计备注", row -> row.remark == null ? "—" : row.remark));
       history.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
       history.setPrefHeight(340);
-      history.setItems(FXCollections.observableArrayList(services.deposits.history(session, bill.patientId)));
+      history.setItems(FXCollections.observableArrayList(DbWork.read(services.deposits::history, session, bill.patientId)));
       Dialog<Void> dialog = new Dialog<Void>();
       dialog.setTitle("患者预存资金双写审计流水");
       dialog.setHeaderText("患者：" + bill.patientName + "  ·  当前可用预存结存：" + Money.format(balance));
       dialog.getDialogPane().setContent(history);
       dialog.getDialogPane().getButtonTypes().add(javafx.scene.control.ButtonType.CLOSE);
-      dialog.showAndWait();
+      Ui.show(dialog);
     } catch (Exception exception) { Ui.error(exception); }
+  }
+
+  private void discount() {
+    try {DiscountDialog.show(services,session,table.getSelectionModel().getSelectedItem());load();}
+    catch(Exception error){Ui.error(error);}
   }
 
   private void refund() {
     BillSummary bill = table.getSelectionModel().getSelectedItem();
     if (bill == null) { Ui.error(new IllegalArgumentException("请选择需要申请退款的账单")); return; }
-    TextInputDialog dialog = new TextInputDialog();
+    Dialog<ButtonType> dialog = new Dialog<ButtonType>();
     dialog.setTitle("发起账单退款申请");
     dialog.setHeaderText("账单号：" + bill.billCode + "，当前最大可退款额：" + Money.format(bill.paidCents - bill.refundedCents));
-    dialog.setContentText("请输入本次申请退款金额 (元)：");
-    dialog.showAndWait().ifPresent(value -> {
+    TextField amount=new TextField();Ui.moneyField(amount);amount.setPromptText("退款金额（元）");
+    TextField reason=new TextField();reason.setPromptText("退款原因（必填）");
+    TextArea remark=new TextArea();remark.setPromptText("申请人备注（可选）");remark.setPrefRowCount(2);
+    dialog.getDialogPane().setContent(new VBox(10,amount,reason,remark));
+    dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK,ButtonType.CANCEL);
+    dialog.getDialogPane().lookupButton(ButtonType.OK).addEventFilter(javafx.event.ActionEvent.ACTION,event->{
       try {
-        long id = services.refunds.request(session, bill.id, Money.parse(value), "前台发起退款冲正申请", null);
+        long id = DbWork.read(services.refunds::request, session, bill.id, Money.parse(amount.getText()), reason.getText(), remark.getText());
         Ui.info("退款申请已成功提交至系统管理员审批，审批流水号：" + id);
         load();
-      } catch (Exception exception) { Ui.error(exception); }
+      } catch (Exception exception) { event.consume();Ui.error(exception); }
     });
+    Ui.show(dialog);
   }
 
   private TableColumn<BillSummary, String> column(String title, java.util.function.Function<BillSummary, String> getter) {
@@ -205,12 +227,5 @@ public class BillPage {
     }
   }
 
-  private boolean can(Permission permission) {
-    try {
-      Authorization.require(session, permission);
-      return true;
-    } catch (SecurityException e) {
-      return false;
-    }
-  }
+  private boolean can(Permission permission) { return session.can(permission); }
 }

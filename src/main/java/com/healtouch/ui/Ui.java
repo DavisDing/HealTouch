@@ -15,27 +15,60 @@ import javafx.scene.layout.VBox;
 
 public final class Ui {
   private Ui() {}
+  private static final java.util.Set<javafx.scene.control.Dialog<?>> dialogs = new java.util.HashSet<javafx.scene.control.Dialog<?>>();
+  public static Runnable sessionExpired = () -> {};
+  public static Runnable activity = () -> {};
+  public static Runnable openRecovery;
+  public static <T> java.util.Optional<T> show(javafx.scene.control.Dialog<T> dialog) {
+    if (DbWork.owner != null && DbWork.owner.isShowing() && dialog.getOwner() == null) dialog.initOwner(DbWork.owner);
+    dialogs.add(dialog);
+    dialog.getDialogPane().addEventFilter(javafx.scene.input.InputEvent.ANY,event->activity.run());
+    try { return dialog.showAndWait(); } finally { dialogs.remove(dialog); }
+  }
+  public static void closeDialogs() {
+    for (javafx.scene.control.Dialog<?> dialog : new java.util.ArrayList<javafx.scene.control.Dialog<?>>(dialogs)) dialog.close();
+  }
+  public static void moneyField(javafx.scene.control.TextField field) {
+    field.setTextFormatter(new javafx.scene.control.TextFormatter<String>(change ->
+        change.getControlNewText().matches("[0-9]{0,10}(\\.[0-9]{0,2})?") ? change : null));
+  }
+
 
   public static void error(Throwable e) {
+    org.slf4j.LoggerFactory.getLogger(Ui.class).error("界面操作未完成", e);
+    if (e instanceof com.healtouch.service.Authorization.SessionExpiredException) {
+      sessionExpired.run(); return;
+    }
     Alert a = new Alert(Alert.AlertType.ERROR);
     a.setTitle("操作未完成");
     a.setHeaderText(e.getMessage() == null ? "发生未预期错误" : e.getMessage());
     a.setContentText("请核对必填项目与业务规则后继续操作。");
-    a.showAndWait();
+    boolean corrupt=false;
+    for(Throwable cause=e;cause!=null;cause=cause.getCause()) {
+      String message=cause.getMessage();
+      if(message!=null && (message.contains("损坏") || message.contains("出生日期格式无效") || message.contains("SQLITE_CORRUPT") || message.contains("SQLITE_NOTADB"))) corrupt=true;
+    }
+    ButtonType recovery=new ButtonType("打开备份与还原",javafx.scene.control.ButtonBar.ButtonData.OTHER);
+    if(corrupt) {
+      a.setContentText("发现数据完整性问题，请保留当前数据并联系管理员。详细异常已写入数据目录 logs；管理员可从完整备份恢复。");
+      if(openRecovery!=null)a.getButtonTypes().add(recovery);
+    }
+    java.util.Optional<ButtonType> result=show(a);
+    if(result.isPresent() && result.get()==recovery && openRecovery!=null)openRecovery.run();
   }
 
   public static void info(String text) {
     Alert a = new Alert(Alert.AlertType.INFORMATION, text, ButtonType.OK);
     a.setTitle("HealTouch 门诊提示");
     a.setHeaderText(null);
-    a.showAndWait();
+    show(a);
   }
 
   public static boolean confirm(String text) {
     Alert a = new Alert(Alert.AlertType.CONFIRMATION, text, ButtonType.OK, ButtonType.CANCEL);
     a.setTitle("请确认操作");
     a.setHeaderText(null);
-    return a.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
+    return show(a).orElse(ButtonType.CANCEL) == ButtonType.OK;
   }
 
   public static VBox page(String title, Node... children) {

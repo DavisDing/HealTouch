@@ -35,6 +35,7 @@ public class BillingService {
           String therapistName = requireActiveTherapist(c, therapistId);
           List<TreatmentLine> lines = canonicalLines(c, requestedLines);
           long gross = sumLines(lines);
+          if(gross<=0) throw new IllegalArgumentException("账单金额必须大于0");
           long id;
           try (PreparedStatement ps =
               c.prepareStatement(
@@ -80,12 +81,13 @@ public class BillingService {
   public void applyDiscount(UserSession actor, long billId, long discountCents, String reason) {
     Authorization.require(actor, Permission.DISCOUNT_APPLY);
     Checks.required(reason, "折扣原因");
+    expireBillIfNeeded(billId);
     Jdbc.inTransaction(
         dataSource,
         c -> {
           BillAmounts bill = loadAmounts(c, billId);
           checkPending(bill);
-          if (discountCents < 0 || discountCents > bill.gross)
+          if (discountCents < 0 || discountCents >= bill.gross)
             throw new IllegalArgumentException("折扣金额无效");
           try (PreparedStatement ps =
               c.prepareStatement(
@@ -99,6 +101,9 @@ public class BillingService {
             ps.setLong(5, billId);
             ps.executeUpdate();
           }
+          try (PreparedStatement ps = c.prepareStatement("UPDATE discount_request SET status='APPROVED',approver_id=?,decided_at=CURRENT_TIMESTAMP WHERE bill_id=? AND status='PENDING'")) {
+            ps.setLong(1, actor.userId); ps.setLong(2, billId); ps.executeUpdate();
+          }
           audit.record(
               c,
               actor.userId,
@@ -106,7 +111,7 @@ public class BillingService {
               "BILL",
               String.valueOf(billId),
               String.valueOf(bill.discount),
-              String.valueOf(discountCents));
+              "type=AMOUNT;gross="+bill.gross+";discount="+discountCents+";receivable="+(bill.gross-discountCents)+";reason="+reason);
           return null;
         });
   }
@@ -114,11 +119,18 @@ public class BillingService {
   public void checkout(UserSession actor, long billId, List<PaymentLine> payments) {
     Authorization.require(actor, Permission.BILL_CHARGE);
     if (payments == null || payments.isEmpty()) throw new IllegalArgumentException("至少输入一种支付方式");
+    expireBillIfNeeded(billId);
     Jdbc.inTransaction(
         dataSource,
         c -> {
           BillAmounts bill = loadAmounts(c, billId);
           checkPending(bill);
+          try (PreparedStatement ps = c.prepareStatement("SELECT 1 FROM discount_request WHERE bill_id=? AND status='PENDING'")) {
+            ps.setLong(1, billId);
+            try (ResultSet rs = ps.executeQuery()) {
+              if (rs.next()) throw new IllegalStateException("折扣申请尚未审批，不能收费");
+            }
+          }
           long total = sumPayments(payments);
           if (total != bill.receivable)
             throw new IllegalArgumentException(
@@ -154,7 +166,7 @@ public class BillingService {
   }
 
   public long receivable(UserSession actor, long billId) {
-    Authorization.require(actor, Permission.PATIENT_VIEW);
+    Authorization.requireAny(actor, Permission.TREATMENT_CREATE, Permission.BILL_CHARGE);
     try (Connection c = dataSource.getConnection();
         PreparedStatement ps = c.prepareStatement("SELECT receivable_cents FROM bill WHERE id=?")) {
       ps.setLong(1, billId);
@@ -183,26 +195,83 @@ public class BillingService {
           }
           audit.record(
               c, actor.userId, "BILL_VOIDED", "BILL", String.valueOf(billId), null, reason);
+          cancelDiscount(c, billId);
           return null;
         });
   }
 
-  public int voidExpiredPending() {
-    return Jdbc.inTransaction(
-        dataSource,
-        c -> {
-          try (PreparedStatement ps =
-              c.prepareStatement(
-                  "UPDATE bill SET"
-                      + " status='VOIDED',voided_at=CURRENT_TIMESTAMP,void_reason='收费会话超过30分钟未完成'"
-                      + " WHERE status='PENDING_PAYMENT' AND created_at < datetime('now','-30"
-                      + " minutes')")) {
-            return ps.executeUpdate();
-          }
-        });
+  int voidExpiredPending() {
+    return expire(null);
   }
 
-  public List<BillSummary> list(String keyword, BillStatus status) {
+  private void expireBillIfNeeded(long billId) { expire(billId); }
+
+  private int expire(Long billId) {
+    return Jdbc.inTransaction(dataSource, c -> {
+      List<Long> ids = new ArrayList<Long>();
+      try (PreparedStatement ps = c.prepareStatement("SELECT id FROM bill WHERE status='PENDING_PAYMENT' AND created_at<=datetime('now','-30 minutes')" + (billId == null ? "" : " AND id=?"))) {
+        if (billId != null) ps.setLong(1, billId);
+        try (ResultSet rs = ps.executeQuery()) { while (rs.next()) ids.add(rs.getLong(1)); }
+      }
+      for (Long id : ids) {
+        try (PreparedStatement ps = c.prepareStatement("UPDATE bill SET status='VOIDED',voided_at=CURRENT_TIMESTAMP,void_reason='系统：收费会话超过30分钟未完成' WHERE id=? AND status='PENDING_PAYMENT'")) {
+          ps.setLong(1, id);
+          if (ps.executeUpdate() == 1) {
+            audit.record(c, null, "BILL_EXPIRED_SYSTEM", "BILL", String.valueOf(id), "PENDING_PAYMENT", "VOIDED;actor=SYSTEM;timeout=30m");
+            cancelDiscount(c, id);
+          }
+        }
+      }
+      return ids.size();
+    });
+  }
+
+  private void cancelDiscount(Connection c, long billId) throws SQLException {
+    try (PreparedStatement ps = c.prepareStatement("UPDATE discount_request SET status='CANCELLED',decided_at=CURRENT_TIMESTAMP WHERE bill_id=? AND status='PENDING'")) {
+      ps.setLong(1, billId); ps.executeUpdate();
+    }
+  }
+
+  public long requestDiscount(UserSession actor, long billId, long discountCents, String reason) {
+    Authorization.require(actor, Permission.BILL_CHARGE);
+    Checks.required(reason, "折扣原因");
+    expireBillIfNeeded(billId);
+    return Jdbc.inTransaction(dataSource, c -> {
+      BillAmounts bill = loadAmounts(c, billId); checkPending(bill);
+      if (discountCents <= 0 || discountCents >= bill.gross) throw new IllegalArgumentException("折扣必须大于0且小于原价，折后金额必须大于0");
+      try (PreparedStatement ps = c.prepareStatement("INSERT INTO discount_request(bill_id,discount_cents,reason,applicant_id) VALUES(?,?,?,?)", Statement.RETURN_GENERATED_KEYS)) {
+        ps.setLong(1,billId); ps.setLong(2,discountCents); ps.setString(3,reason); ps.setLong(4,actor.userId); ps.executeUpdate();
+        try (ResultSet rs=ps.getGeneratedKeys()) {
+          if (!rs.next()) throw new SQLException("未生成折扣申请");
+          long id=rs.getLong(1);
+          audit.record(c,actor.userId,"DISCOUNT_REQUESTED","BILL",String.valueOf(billId),null,"request="+id+";amount="+discountCents+";reason="+reason);
+          return id;
+        }
+      }
+    });
+  }
+
+  public String pendingDiscount(UserSession actor, long billId) {
+    Authorization.requireAny(actor,Permission.BILL_CHARGE,Permission.BILL_REFUND);
+    try (Connection c=dataSource.getConnection(); PreparedStatement ps=c.prepareStatement("SELECT discount_cents,reason FROM discount_request WHERE bill_id=? AND status='PENDING'")) {
+      ps.setLong(1,billId);
+      try(ResultSet rs=ps.executeQuery()) { return rs.next() ? "申请折扣："+com.healtouch.util.Money.format(rs.getLong(1))+"；原因："+rs.getString(2) : "无待审批折扣申请"; }
+    } catch(SQLException e) { throw new IllegalStateException("查询折扣申请失败",e); }
+  }
+
+  public void rejectDiscount(UserSession actor, long billId) {
+    Authorization.require(actor,Permission.DISCOUNT_APPLY);
+    Jdbc.inTransaction(dataSource,c->{
+      try(PreparedStatement ps=c.prepareStatement("UPDATE discount_request SET status='REJECTED',approver_id=?,decided_at=CURRENT_TIMESTAMP WHERE bill_id=? AND status='PENDING'")) {
+        ps.setLong(1,actor.userId); ps.setLong(2,billId);
+        if(ps.executeUpdate()!=1) throw new IllegalStateException("无待审批折扣申请");
+      }
+      audit.record(c,actor.userId,"DISCOUNT_REJECTED","BILL",String.valueOf(billId),null,"REJECTED");return null;
+    });
+  }
+
+  public List<BillSummary> list(UserSession actor, String keyword, BillStatus status) {
+    Authorization.requireAny(actor, Permission.BILL_CHARGE, Permission.BILL_REFUND, Permission.REPORT_VIEW);
     List<BillSummary> list = new ArrayList<BillSummary>();
     String sql =
         "SELECT b.*,p.name patient_name FROM bill b JOIN patient p ON p.id=b.patient_id WHERE (?=''"
