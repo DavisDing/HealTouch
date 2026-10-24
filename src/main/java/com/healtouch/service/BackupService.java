@@ -1,12 +1,21 @@
 package com.healtouch.service;
 
-import com.healtouch.config.*;
-import com.healtouch.dao.*;
-import com.healtouch.model.*;
+import com.healtouch.config.Database;
+import com.healtouch.dao.AuditLogDao;
+import com.healtouch.dao.Jdbc;
+import com.healtouch.model.Permission;
+import com.healtouch.model.UserSession;
 import java.io.*;
 import java.nio.file.*;
-import java.security.*;
-import java.security.spec.*;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.SecureRandom;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.sql.*;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
@@ -14,7 +23,6 @@ import java.util.*;
 import java.util.zip.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
-import javax.sql.DataSource;
 
 /** Versioned, authenticated encrypted backups. Automatic jobs only need the public key. */
 public final class BackupService {
